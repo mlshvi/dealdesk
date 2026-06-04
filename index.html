@@ -2681,7 +2681,7 @@ function renderComparison() {
    html += `<tr><td style="padding:7px 8px; position:sticky; left:0; background:#f5f6fa; border-bottom:1px solid rgba(0,0,0,.08); color:#1a1a2e;">${opt}</td>`;
     trimNames.forEach(t => {
       const has = (trims[t].stdEq || '').includes(opt);
-      html += `<td style="padding:7px 8px; text-align:center; border-bottom:1px solid rgba(255,255,255,.05);">${has ? '<span style="color:#30d158;">✓</span>' : '<span style="color:rgba(255,255,255,.2);">—</span>'}</td>`;
+         html += `<td style="padding:7px 8px; text-align:center; border-bottom:1px solid rgba(0,0,0,.06);">${has ? '<span style="color:#30d158;">✓</span>' : '<span style="color:#c0c0c0;">—</span>'}</td>`;
     });
     html += '</tr>';
   });
