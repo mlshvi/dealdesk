@@ -2586,33 +2586,6 @@ async function sendAiMessage() {
 }
 // Запускаем фоновую загрузку цен
 loadCatalogFromGoogle();
-  // === АВТОСОХРАНЕНИЕ ЧЕРНОВИКА ===
-const DRAFT_FIELDS = ['vDName','vDAddr','vDPhone','vNum','vDate','vCarName','vCarPkg','vCarVIN','vCarColor','vCarSpecs','vCarEq','vCarStdEq','vPriceOld','vPriceNew','vMgrName','vMgrPhone','vMgrEmail'];
-
-function saveDraft() {
-  let draft = {};
-  DRAFT_FIELDS.forEach(id => draft[id] = val(id));
-  localStorage.setItem('kp_draft', JSON.stringify(draft));
-}
-
-function loadDraft() {
-  try {
-    let draft = JSON.parse(localStorage.getItem('kp_draft'));
-    if (!draft) return;
-    DRAFT_FIELDS.forEach(id => { if (draft[id]) setVal(id, draft[id]); });
-    ['vPriceOld','vPriceNew'].forEach(id => { let el = $(id); if (el && el.value) formatInputNumber(el); });
-    renderKP();
-  } catch(e) {}
-}
-
-document.querySelectorAll('input, textarea').forEach(el => {
-  el.addEventListener('input', () => {
-    clearTimeout(window._draftTimer);
-    window._draftTimer = setTimeout(saveDraft, 500);
-  });
-});
-
-loadDraft();
 </script>
 </body>
 </html>
