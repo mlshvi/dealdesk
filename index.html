@@ -1926,8 +1926,8 @@ function applyCatalog() {
   setVal('vCarName', `${selBrand.value} ${selModel.value}`); setVal('vCarPkg', selTrim.value); setVal('vCarVIN', ''); setVal('vCarColor', '');
   setVal('vCarSpecs', data.specs || ""); setVal('vCarStdEq', data.stdEq || ""); setVal('vCarEq', '');
   
-  setVal('vPriceOld', data.priceOld || ""); if(data.priceOld) formatInputNumber($('vPriceOld'));
-  setVal('vPriceNew', data.priceNew || ""); if(data.priceNew) formatInputNumber($('vPriceNew'));
+  ssetVal('vPriceOld', data.baseMcp || ""); if(data.baseMcp) formatInputNumber($('vPriceOld'));
+setVal('vPriceNew', data.baseMcp || ""); if(data.baseMcp) formatInputNumber($('vPriceNew'));
   
   setVal('calcCostCar', data.costCar || ""); if(data.costCar) formatInputNumber($('calcCostCar'));
   setVal('ojBasePrice', data.baseMcp || ""); if(data.baseMcp) formatInputNumber($('ojBasePrice'));
