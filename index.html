@@ -2214,6 +2214,28 @@ function parseNum(id) {
   if (!el) return 0;
   return parseFloat(el.value.replace(/\s/g, '').replace(',', '.')) || 0;
 }
+  // ==========================================
+// АНИМАЦИЯ ЧИСЕЛ
+// ==========================================
+function animateNumber(el, targetText) {
+  if (!el) return;
+  const target = Number(String(targetText).replace(/\D/g, '')) || 0;
+  const current = Number(String(el.textContent).replace(/\D/g, '')) || 0;
+  if (target === current) { el.textContent = targetText; return; }
+  const suffix = String(targetText).replace(/[\d\s]/g, '').replace('—', '');
+  if (target === 0 && targetText.includes('—')) { el.textContent = targetText; return; }
+  const duration = 500;
+  const startTime = performance.now();
+  function tick(now) {
+    let progress = Math.min((now - startTime) / duration, 1);
+    progress = 1 - Math.pow(1 - progress, 3);
+    const value = Math.round(current + (target - current) * progress);
+    el.textContent = value.toLocaleString('ru-RU') + (suffix ? ' ' + suffix : '');
+    if (progress < 1) requestAnimationFrame(tick);
+    else el.textContent = targetText;
+  }
+  requestAnimationFrame(tick);
+}
 function renderKP() {
   const dc = $('document-container');
   if (dc) dc.className = `theme-${val('vTheme') || 'premium'}`;
