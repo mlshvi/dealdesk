@@ -987,13 +987,7 @@ body.light-theme .card .btn-red:hover{
   background:rgba(220,38,38,.15) !important;
 }
 
-/* Фикс: белый текст в таблице сравнения */
-.compare-modal table td,
-.compare-modal table th,
-table td,
-table th {
-    color: #ffffff !important;
-}
+
 </style>
 </style>
 </head>
@@ -1381,7 +1375,7 @@ table th {
     <div style="overflow-y:auto; max-height:55vh; flex-grow:1;" id="scheduleTableWrap">
       <table id="scheduleTable" style="width:100%; border-collapse:collapse; font-size:12px;">
         <thead>
-          <tr style="position:sticky; top:0; background:rgba(22,22,30,.98); z-index:1;">
+          <tr style="position:sticky; top:0; background:#f5f6fa; z-index:1;">
             <th style="padding:8px 6px; text-align:center; border-bottom:2px solid rgba(48,209,88,.3); color:#30d158; font-size:11px;">№</th>
             <th style="padding:8px 6px; text-align:right; border-bottom:2px solid rgba(48,209,88,.3); color:#30d158; font-size:11px;">Платёж</th>
             <th style="padding:8px 6px; text-align:right; border-bottom:2px solid rgba(48,209,88,.3); color:#30d158; font-size:11px;">% банку</th>
@@ -2673,7 +2667,7 @@ function renderComparison() {
     html += `<th style="padding:10px; text-align:center; border-bottom:2px solid rgba(58,106,232,.3); color:#8eb0ff;">${t}</th>`;
   });
   html += '</tr>';
-  html += '<tr><td style="padding:8px; font-weight:700; position:sticky; left:0; background:rgba(22,22,30,.98);">Цена (МЦП)</td>';
+ html += '<tr><td style="padding:8px; font-weight:700; position:sticky; left:0; background:#f5f6fa; color:#1a1a2e;">Цена (МЦП)</td>';
   trimNames.forEach(t => {
     const price = trims[t].baseMcp ? Number(trims[t].baseMcp).toLocaleString('ru-RU') + ' ₽' : '—';
     html += `<td style="padding:8px; text-align:center; font-weight:700; color:#30d158;">${price}</td>`;
@@ -2684,7 +2678,7 @@ function renderComparison() {
     (trims[t].stdEq || '').split('\n').filter(Boolean).forEach(opt => allOptions.add(opt.trim()));
   });
   [...allOptions].forEach(opt => {
-    html += `<tr><td style="padding:7px 8px; position:sticky; left:0; background:rgba(22,22,30,.98); border-bottom:1px solid rgba(255,255,255,.05);">${opt}</td>`;
+   html += `<tr><td style="padding:7px 8px; position:sticky; left:0; background:#f5f6fa; border-bottom:1px solid rgba(0,0,0,.08); color:#1a1a2e;">${opt}</td>`;
     trimNames.forEach(t => {
       const has = (trims[t].stdEq || '').includes(opt);
       html += `<td style="padding:7px 8px; text-align:center; border-bottom:1px solid rgba(255,255,255,.05);">${has ? '<span style="color:#30d158;">✓</span>' : '<span style="color:rgba(255,255,255,.2);">—</span>'}</td>`;
