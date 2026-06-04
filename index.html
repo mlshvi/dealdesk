@@ -1022,6 +1022,7 @@ body.light-theme .card .btn-red:hover{
         <option value="">-- Выберите модель --</option>
       </select>
       <select id="catTrim" onchange="applyCatalog()" disabled>
+        <button class="btn-sec" onclick="openCompareModal()" style="margin-top:8px;">⚖️ Сравнить комплектации</button>
         <option value="">-- Выберите комплектацию --</option>
       </select>
     </div>
@@ -2625,8 +2626,87 @@ async function sendAiMessage() {
     if (input) input.focus();
   }
 }
+  // ==========================================
+// СРАВНЕНИЕ КОМПЛЕКТАЦИЙ
+// ==========================================
+function openCompareModal() {
+  const sel = $('cmpBrand');
+  sel.innerHTML = '<option value="">-- Бренд --</option>';
+  Object.keys(CATALOG).forEach(b => sel.options.add(new Option(b, b)));
+  if (val('catBrand')) { sel.value = val('catBrand'); cmpUpdateModels();
+    if (val('catModel')) { $('cmpModel').value = val('catModel'); renderComparison(); } }
+  $('compareModal').classList.add('active');
+}
+function closeCompareModal() { $('compareModal').classList.remove('active'); }
+
+function cmpUpdateModels() {
+  const b = val('cmpBrand'); const selM = $('cmpModel');
+  selM.innerHTML = '<option value="">-- Модель --</option>';
+  if (b && CATALOG[b]) {
+    selM.disabled = false;
+    Object.keys(CATALOG[b]).forEach(m => selM.options.add(new Option(m, m)));
+  } else { selM.disabled = true; }
+  $('comparisonWrap').innerHTML = '';
+}
+
+function renderComparison() {
+  const b = val('cmpBrand'); const m = val('cmpModel');
+  const wrap = $('comparisonWrap');
+  if (!b || !m || !CATALOG[b] || !CATALOG[b][m]) { wrap.innerHTML = ''; return; }
+  const trims = CATALOG[b][m];
+  const trimNames = Object.keys(trims);
+  let html = '<table style="width:100%; border-collapse:collapse; font-size:12px;">';
+  html += '<thead><tr><th style="padding:10px; text-align:left; position:sticky; left:0; background:rgba(22,22,30,.98);"></th>';
+  trimNames.forEach(t => {
+    html += `<th style="padding:10px; text-align:center; border-bottom:2px solid rgba(58,106,232,.3); color:#8eb0ff;">${t}</th>`;
+  });
+  html += '</tr>';
+  html += '<tr><td style="padding:8px; font-weight:700; position:sticky; left:0; background:rgba(22,22,30,.98);">Цена (МЦП)</td>';
+  trimNames.forEach(t => {
+    const price = trims[t].baseMcp ? Number(trims[t].baseMcp).toLocaleString('ru-RU') + ' ₽' : '—';
+    html += `<td style="padding:8px; text-align:center; font-weight:700; color:#30d158;">${price}</td>`;
+  });
+  html += '</tr></thead><tbody>';
+  const allOptions = new Set();
+  trimNames.forEach(t => {
+    (trims[t].stdEq || '').split('\n').filter(Boolean).forEach(opt => allOptions.add(opt.trim()));
+  });
+  [...allOptions].forEach(opt => {
+    html += `<tr><td style="padding:7px 8px; position:sticky; left:0; background:rgba(22,22,30,.98); border-bottom:1px solid rgba(255,255,255,.05);">${opt}</td>`;
+    trimNames.forEach(t => {
+      const has = (trims[t].stdEq || '').includes(opt);
+      html += `<td style="padding:7px 8px; text-align:center; border-bottom:1px solid rgba(255,255,255,.05);">${has ? '<span style="color:#30d158;">✓</span>' : '<span style="color:rgba(255,255,255,.2);">—</span>'}</td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
+
 // Запускаем фоновую загрузку цен
 loadCatalogFromGoogle();
 </script>
+  <!-- МОДАЛКА СРАВНЕНИЯ КОМПЛЕКТАЦИЙ -->
+<div id="compareModal" class="modal-overlay">
+  <div class="modal-content" style="max-width:900px;">
+    <div class="modal-header">
+      <h2>⚖️ Сравнение комплектаций</h2>
+      <button onclick="closeCompareModal()" class="close-btn">&times;</button>
+    </div>
+    <div class="row">
+      <select id="cmpBrand" onchange="cmpUpdateModels()">
+        <option value="">-- Бренд --</option>
+      </select>
+      <select id="cmpModel" onchange="renderComparison()" disabled>
+        <option value="">-- Модель --</option>
+      </select>
+    </div>
+    <div style="overflow:auto; max-height:60vh; margin-top:15px;" id="comparisonWrap">
+      <div style="text-align:center; color:rgba(255,255,255,.4); padding:40px;">
+        Выберите бренд и модель для сравнения
+      </div>
+    </div>
+  </div>
+</div>
 </body>
 </html>
