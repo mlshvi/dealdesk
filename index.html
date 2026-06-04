@@ -2194,7 +2194,26 @@ function downloadSchedulePDF() {
     showToast('❌ Ошибка создания PDF', true);
   });
 }
+// Форматирование числа с пробелами (1 000 000)
+function formatInputNumber(el) {
+  if (!el) return;
+  let pos = el.selectionStart;
+  let oldLen = el.value.length;
+  // убираем всё кроме цифр
+  let digits = el.value.replace(/\D/g, '');
+  // добавляем пробелы каждые 3 цифры
+  el.value = digits.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  // возвращаем курсор на место
+  let newLen = el.value.length;
+  el.selectionEnd = el.selectionStart = pos + (newLen - oldLen);
+}
 
+// Получить число из поля (убрать пробелы)
+function parseNum(id) {
+  let el = document.getElementById(id);
+  if (!el) return 0;
+  return parseFloat(el.value.replace(/\s/g, '').replace(',', '.')) || 0;
+}
 function renderKP() {
   const dc = $('document-container');
   if (dc) dc.className = `theme-${val('vTheme') || 'premium'}`;
