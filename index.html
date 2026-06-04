@@ -2293,8 +2293,8 @@ function renderKP() {
   let baseOldNum = getNum(val('vPriceOld')); let baseNewNum = getNum(val('vPriceNew'));
   let finalOld = baseOldNum > 0 ? baseOldNum + dopSum : dopSum; let finalNew = baseNewNum; 
 
-  if ($('outPriceOld')) $('outPriceOld').textContent = baseOldNum > 0 ? formatRub(finalOld) : "—";
-  if ($('outPriceNew')) $('outPriceNew').textContent = baseNewNum > 0 ? formatRub(finalNew) : "—";
+    if ($('outPriceOld')) animateNumber($('outPriceOld'), baseOldNum > 0 ? formatRub(finalOld) : "—");
+  if ($('outPriceNew')) animateNumber($('outPriceNew'), baseNewNum > 0 ? formatRub(finalNew) : "—");
 
   let diff = finalOld - finalNew;
   if ($('outDiscount')) {
