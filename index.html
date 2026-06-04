@@ -1448,14 +1448,18 @@ const setVal = (id, v) => { const el = $(id); if (el) el.value = v || ''; };
 const formatRub = v => { let d = String(v).replace(/\D/g, ''); return d ? Number(d).toLocaleString('ru-RU') + " ₽" : "—"; };
 const getNum = v => Number(String(v).replace(/\D/g, '')) || 0;
 
-function formatInputNumber(el) {
+function formatPhone(el) {
   if (!el) return;
-  let cursor = el.selectionStart; 
-  let oldLen = el.value.length; 
-  let v = el.value.replace(/\D/g, '');
-  el.value = v ? v.replace(/\B(?=(\d{3})+(?!\d))/g, " ") : '';
-  let newLen = el.value.length; 
-  try { el.setSelectionRange(cursor + (newLen - oldLen), cursor + (newLen - oldLen)); } catch(e){}
+  let digits = el.value.replace(/\D/g, '');
+  if (digits.startsWith('8')) digits = '7' + digits.slice(1);
+  if (digits.startsWith('7')) digits = digits.slice(1);
+  digits = digits.slice(0, 10);
+  let res = '+7';
+  if (digits.length > 0) res += ' (' + digits.slice(0, 3);
+  if (digits.length >= 4) res += ') ' + digits.slice(3, 6);
+  if (digits.length >= 7) res += '-' + digits.slice(6, 8);
+  if (digits.length >= 9) res += '-' + digits.slice(8, 10);
+  el.value = res;
 }
 
 function showToast(msg, isError = false) {
@@ -2228,7 +2232,7 @@ function renderKP() {
   document.querySelectorAll('.dop-check').forEach(cb => {
     if (cb.checked) { 
         let prInput = $(cb.id + '_price'); 
-        let p = prInput ? (parseInt(prInput.value) || 0) : 0; 
+        let p = prInput ? getNum(prInput.value) : 0; 
         dopSum += p; selectedCount++; 
         dopItems.push(`<b>${cb.dataset.name}</b> — ${p.toLocaleString('ru-RU')} ₽`); 
     }
@@ -2582,6 +2586,33 @@ async function sendAiMessage() {
 }
 // Запускаем фоновую загрузку цен
 loadCatalogFromGoogle();
+  // === АВТОСОХРАНЕНИЕ ЧЕРНОВИКА ===
+const DRAFT_FIELDS = ['vDName','vDAddr','vDPhone','vNum','vDate','vCarName','vCarPkg','vCarVIN','vCarColor','vCarSpecs','vCarEq','vCarStdEq','vPriceOld','vPriceNew','vMgrName','vMgrPhone','vMgrEmail'];
+
+function saveDraft() {
+  let draft = {};
+  DRAFT_FIELDS.forEach(id => draft[id] = val(id));
+  localStorage.setItem('kp_draft', JSON.stringify(draft));
+}
+
+function loadDraft() {
+  try {
+    let draft = JSON.parse(localStorage.getItem('kp_draft'));
+    if (!draft) return;
+    DRAFT_FIELDS.forEach(id => { if (draft[id]) setVal(id, draft[id]); });
+    ['vPriceOld','vPriceNew'].forEach(id => { let el = $(id); if (el && el.value) formatInputNumber(el); });
+    renderKP();
+  } catch(e) {}
+}
+
+document.querySelectorAll('input, textarea').forEach(el => {
+  el.addEventListener('input', () => {
+    clearTimeout(window._draftTimer);
+    window._draftTimer = setTimeout(saveDraft, 500);
+  });
+});
+
+loadDraft();
 </script>
 </body>
 </html>
