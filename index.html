@@ -1765,19 +1765,20 @@ function syncFinToCredit() {
   calculateCredit('extra');
 }
   function syncDopsToCredit() {
-  let saleDops  = getNum(val('calcSaleDops'));
-  let costDops  = getNum(val('calcCostDops'));
-  let dopMargin = Math.round((saleDops - costDops) / 1.22);
+  let saleDops = getNum(val('calcSaleDops'));
 
   let creditDopsInput = $('creditDopsMargin');
   if (!creditDopsInput) return;
 
-  if (dopMargin > 0) {
-    creditDopsInput.value = String(dopMargin);
+  if (saleDops > 0) {
+    creditDopsInput.value = String(saleDops);
     formatInputNumber(creditDopsInput);
   } else {
     creditDopsInput.value = '';
   }
+
+  calculateCredit('extra');
+}
 
   calculateCredit('extra');
 }
