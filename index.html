@@ -1091,9 +1091,13 @@ body.light-theme .card .btn-red:hover{
       <div id="calcContent" style="display: none; padding-top: 10px;">
         <span class="hint">Данные не выводятся на печать и в PDF</span>
         <div class="row">
-          <input type="text" id="calcCostCar" placeholder="Себес. авто" oninput="formatInputNumber(this); calculateMargin()">
-          <input type="text" id="calcCostDops" placeholder="Себес. допов" oninput="formatInputNumber(this); calculateMargin()">
-        </div>
+  <input type="text" id="calcCostCar" placeholder="Себес. авто" oninput="formatInputNumber(this); calculateMargin()">
+  <input type="text" id="calcCostDops" placeholder="Себес. допов" oninput="formatInputNumber(this); calculateMargin()">
+</div>
+<div class="row">
+  <input type="text" id="calcSaleDops" placeholder="Цена продажи допов" oninput="formatInputNumber(this); calculateMargin(); syncDopsToCredit()">
+  <input type="text" id="calcZavyshenie" placeholder="Завышение (↓ЖОК)" oninput="formatInputNumber(this); calculateMargin()">
+</div>
         
         <label style="font-size: 13px; display: flex; align-items: center; gap: 8px; margin-bottom: 8px; cursor: pointer; color: #1f2937; font-weight: bold;">
           <input type="checkbox" id="useTISupport" onchange="toggleTISupport()"> Добавить поддержку по ТИ
@@ -1103,17 +1107,20 @@ body.light-theme .card .btn-red:hover{
           <input type="text" id="calcSupport" placeholder="Поддержка" oninput="formatInputNumber(this); calculateMargin()">
           <input type="text" id="calcFin" placeholder="Маржа ОКС (85% от ФП)" oninput="formatInputNumber(this); calculateMargin(); syncFinToCredit()">
         </div>
-        <div class="margin-result">
-          <div style="font-weight:normal; font-size:11px; margin-bottom:8px; line-height:1.3;">
-  <div><b>Omoda/Jaecoo:</b> (Цена - Авто - Допы)/1.22 + Поддержка + Маржа ОКС/1.22</div>
-  <div><b>Belgee:</b> (Цена - Авто - Допы)/1.22 + Поддержка/1.22 + Маржа ОКС/1.22</div>
-  <div style="margin-top:4px; color:#3a6ae8 !important;">
-    Маржа ОКС = 85% от суммы фин. продуктов
+       <div class="margin-result">
+  <div style="font-weight:normal; font-size:11px; margin-bottom:8px; line-height:1.3;">
+    <div><b>Omoda/Jaecoo:</b> (Цена - Авто - Допы)/1.22 + Маржа допов/1.22 + Поддержка + Маржа ОКС/1.22 - Завышение</div>
+    <div><b>Belgee:</b> (Цена - Авто - Допы)/1.22 + Маржа допов/1.22 + Поддержка/1.22 + Маржа ОКС/1.22 - Завышение</div>
+    <div style="margin-top:4px; color:#3a6ae8 !important;">
+      Маржа ОКС = 85% от суммы фин. продуктов
+    </div>
   </div>
+  <div style="margin-bottom: 4px; font-size:12px; color:rgba(255,255,255,.5);">
+    Маржа допов (без НДС): <span id="outMarginDops">0 ₽</span>
+  </div>
+  <div style="margin-bottom: 4px;">ЖОК Omoda/JAECOO: <span id="outMarginOmoda">0 ₽</span></div>
+  <div>ЖОК BELGEE: <span id="outMarginBelgee">0 ₽</span></div>
 </div>
-          <div style="margin-bottom: 4px;">Маржа Omoda/JAECOO: <span id="outMarginOmoda">0 ₽</span></div>
-          <div>Маржа BELGEE: <span id="outMarginBelgee">0 ₽</span></div>
-        </div>
       </div>
     </div>
 
@@ -1181,15 +1188,19 @@ body.light-theme .card .btn-red:hover{
     <div style="background:rgba(48,209,88,.06); border:1px solid rgba(48,209,88,.15); border-radius:12px; padding:12px; margin:8px 0 12px;">
       <div class="credit-extras-title">Включить в сумму кредита:</div>
       <div class="row">
-        <div>
-          <span class="hint" style="margin-bottom:2px;">КАСКО (₽):</span>
-          <input type="text" id="creditKasko" placeholder="0" oninput="formatInputNumber(this); calculateCredit('extra')">
-        </div>
-        <div>
-          <span class="hint" style="margin-bottom:2px;">Фин. продукты (₽):</span>
-          <input type="text" id="creditFinProducts" placeholder="0" oninput="formatInputNumber(this); calculateCredit('extra')">
-        </div>
-      </div>
+  <div>
+    <span class="hint" style="margin-bottom:2px;">КАСКО (₽):</span>
+    <input type="text" id="creditKasko" placeholder="0" oninput="formatInputNumber(this); calculateCredit('extra')">
+  </div>
+  <div>
+    <span class="hint" style="margin-bottom:2px;">Фин. продукты (₽):</span>
+    <input type="text" id="creditFinProducts" placeholder="0" oninput="formatInputNumber(this); calculateCredit('extra')">
+  </div>
+</div>
+<div>
+  <span class="hint" style="margin-bottom:2px;">Маржа допов в кредит (₽, без НДС):</span>
+  <input type="text" id="creditDopsMargin" placeholder="0" oninput="formatInputNumber(this); calculateCredit('extra')" style="background:rgba(48,209,88,.06) !important; border-color:rgba(48,209,88,.2) !important;">
+</div>
       <label style="margin-top:4px; margin-bottom:0;">
         <input type="checkbox" id="creditIncludeExtras" onchange="calculateCredit('extra')" checked> Включить КАСКО и ФП в тело кредита
       </label>
@@ -1689,31 +1700,52 @@ document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') closeLightbox();
 });
 function calculateMargin() {
-  let finalPrice = getNum(val('vPriceNew'));
-  let costCar = getNum(val('calcCostCar'));
-  let costDops = getNum(val('calcCostDops'));
-  let support = getNum(val('calcSupport'));
-  let oksMargin = getNum(val('calcFin')); // теперь это именно Маржа ОКС
+  let finalPrice   = getNum(val('vPriceNew'));
+  let costCar      = getNum(val('calcCostCar'));
+  let costDops     = getNum(val('calcCostDops'));
+  let saleDops     = getNum(val('calcSaleDops'));
+  let support      = getNum(val('calcSupport'));
+  let oksMargin    = getNum(val('calcFin'));
+  let zavyshenie   = getNum(val('calcZavyshenie'));
 
-  if (!finalPrice && !costCar) {
-    if ($('outMarginOmoda')) $('outMarginOmoda').innerHTML = '0 ₽';
-    if ($('outMarginBelgee')) $('outMarginBelgee').innerHTML = '0 ₽';
-    return;
+  // Маржа допов без НДС
+  let dopMarginNoVat = (saleDops - costDops) / 1.22;
+
+  // Металл без НДС
+  let metalMarginNoVat = (finalPrice - costCar - costDops) / 1.22;
+
+  // ЖОК
+  let zhokOmoda  = Math.round(
+    (metalMarginNoVat || 0) 
+    + (dopMarginNoVat || 0) 
+    + support 
+    + (oksMargin / 1.22) 
+    - zavyshenie
+  );
+
+  let zhokBelgee = Math.round(
+    (metalMarginNoVat || 0) 
+    + (dopMarginNoVat || 0) 
+    + (support / 1.22) 
+    + (oksMargin / 1.22) 
+    - zavyshenie
+  );
+
+  // Вывод маржи допов
+  if ($('outMarginDops')) {
+    let dopColor = dopMarginNoVat < 0 ? '#dc2626' : 'rgba(255,255,255,.6)';
+    $('outMarginDops').innerHTML = `<span style="color:${dopColor}">${Math.round(dopMarginNoVat).toLocaleString('ru-RU')} ₽</span>`;
   }
 
-  let metalMarginNoVat = (finalPrice - costCar - costDops) / 1.22;
-  let marginOmoda = Math.round((metalMarginNoVat || 0) + support + (oksMargin / 1.22));
-  let marginBelgee = Math.round((metalMarginNoVat || 0) + (support / 1.22) + (oksMargin / 1.22));
-
-  let colorOmoda = marginOmoda < 0 ? '#dc2626' : '#166534';
-  let colorBelgee = marginBelgee < 0 ? '#dc2626' : '#166534';
+  // Вывод ЖОК
+  let colorOmoda  = zhokOmoda  < 0 ? '#dc2626' : '#166534';
+  let colorBelgee = zhokBelgee < 0 ? '#dc2626' : '#166534';
 
   if ($('outMarginOmoda')) {
-    $('outMarginOmoda').innerHTML = `<span style="color:${colorOmoda}">${marginOmoda.toLocaleString('ru-RU')} ₽</span>`;
+    $('outMarginOmoda').innerHTML = `<span style="color:${colorOmoda}">${zhokOmoda.toLocaleString('ru-RU')} ₽</span>`;
   }
-
   if ($('outMarginBelgee')) {
-    $('outMarginBelgee').innerHTML = `<span style="color:${colorBelgee}">${marginBelgee.toLocaleString('ru-RU')} ₽</span>`;
+    $('outMarginBelgee').innerHTML = `<span style="color:${colorBelgee}">${zhokBelgee.toLocaleString('ru-RU')} ₽</span>`;
   }
 }
 function syncFinToCredit() {
@@ -1728,6 +1760,23 @@ function syncFinToCredit() {
     formatInputNumber(fpInput);
   } else {
     fpInput.value = '';
+  }
+
+  calculateCredit('extra');
+}
+  function syncDopsToCredit() {
+  let saleDops  = getNum(val('calcSaleDops'));
+  let costDops  = getNum(val('calcCostDops'));
+  let dopMargin = Math.round((saleDops - costDops) / 1.22);
+
+  let creditDopsInput = $('creditDopsMargin');
+  if (!creditDopsInput) return;
+
+  if (dopMargin > 0) {
+    creditDopsInput.value = String(dopMargin);
+    formatInputNumber(creditDopsInput);
+  } else {
+    creditDopsInput.value = '';
   }
 
   calculateCredit('extra');
@@ -2016,7 +2065,7 @@ function calculateCredit(source) {
   let kasko = getNum(val('creditKasko'));
   let finProd = getNum(val('creditFinProducts'));
   let includeExtras = $('creditIncludeExtras') ? $('creditIncludeExtras').checked : false;
-  let extras = includeExtras ? (kasko + finProd) : 0;
+  let dopsMargin = getNum(val('creditDopsMargin')); let extras = includeExtras ? (kasko + finProd + dopsMargin) : dopsMargin;
 
   let downpayment = getNum(rubInput ? rubInput.value : '');
   let principal = (price - downpayment) + extras;
@@ -2054,7 +2103,7 @@ function buildSchedule() {
   let kasko = getNum(val('creditKasko'));
   let finProd = getNum(val('creditFinProducts'));
   let includeExtras = $('creditIncludeExtras') ? $('creditIncludeExtras').checked : false;
-  let extras = includeExtras ? (kasko + finProd) : 0;
+  let dopsMargin = getNum(val('creditDopsMargin')); let extras = includeExtras ? (kasko + finProd + dopsMargin) : dopsMargin;
   let principal = (price - downpayment) + extras;
   if (principal < 0) principal = 0;
 
@@ -2336,8 +2385,7 @@ function autoNumDate() {
 
 function confirmClear() {
   if(confirm("Очистить все данные в анкете?")) {
-    ['vDName','vDAddr','vDPhone','vNum','vDate','vCarName','vCarPkg','vCarVIN','vCarColor','vCarSpecs','vCarEq','vCarStdEq','vPriceOld','vPriceNew','calcCostCar','calcCostDops','calcSupport','calcFin','ojFactPaid','ojBasePrice','ojDiscount','vMgrName','vMgrPhone','vMgrEmail','creditInitialRub','creditInitialPct','creditKasko','creditFinProducts'].forEach(id => setVal(id, ''));
-    document.querySelectorAll('.dop-check').forEach(cb => cb.checked = false);
+['vDName','vDAddr','vDPhone','vNum','vDate','vCarName','vCarPkg','vCarVIN','vCarColor','vCarSpecs','vCarEq','vCarStdEq','vPriceOld','vPriceNew','calcCostCar','calcCostDops','calcSaleDops','calcZavyshenie','calcSupport','calcFin','ojFactPaid','ojBasePrice','ojDiscount','vMgrName','vMgrPhone','vMgrEmail','creditInitialRub','creditInitialPct','creditKasko','creditFinProducts','creditDopsMargin']    document.querySelectorAll('.dop-check').forEach(cb => cb.checked = false);
     db.imgCars = []; 
     if($('useTISupport')) $('useTISupport').checked = false; 
     if($('showCreditInKP')) $('showCreditInKP').checked = false;if($('creditIncludeExtras')) $('creditIncludeExtras').checked = true;
