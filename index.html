@@ -2385,7 +2385,7 @@ function autoNumDate() {
 
 function confirmClear() {
   if(confirm("Очистить все данные в анкете?")) {
-['vDName','vDAddr','vDPhone','vNum','vDate','vCarName','vCarPkg','vCarVIN','vCarColor','vCarSpecs','vCarEq','vCarStdEq','vPriceOld','vPriceNew','calcCostCar','calcCostDops','calcSaleDops','calcZavyshenie','calcSupport','calcFin','ojFactPaid','ojBasePrice','ojDiscount','vMgrName','vMgrPhone','vMgrEmail','creditInitialRub','creditInitialPct','creditKasko','creditFinProducts','creditDopsMargin']    document.querySelectorAll('.dop-check').forEach(cb => cb.checked = false);
+['vDName','vDAddr','vDPhone','vNum','vDate','vCarName','vCarPkg','vCarVIN','vCarColor','vCarSpecs','vCarEq','vCarStdEq','vPriceOld','vPriceNew','calcCostCar','calcCostDops','calcSaleDops','calcZavyshenie','calcSupport','calcFin','ojFactPaid','ojBasePrice','ojDiscount','vMgrName','vMgrPhone','vMgrEmail','creditInitialRub','creditInitialPct','creditKasko','creditFinProducts','creditDopsMargin'].forEach(id => setVal(id, ''));     document.querySelectorAll('.dop-check').forEach(cb => cb.checked = false);
     db.imgCars = []; 
     if($('useTISupport')) $('useTISupport').checked = false; 
     if($('showCreditInKP')) $('showCreditInKP').checked = false;if($('creditIncludeExtras')) $('creditIncludeExtras').checked = true;
