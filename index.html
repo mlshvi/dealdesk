@@ -1708,24 +1708,26 @@ function calculateMargin() {
   let oksMargin    = getNum(val('calcFin'));
   let zavyshenie   = getNum(val('calcZavyshenie'));
 
-  // Маржа допов без НДС
+  // Маржа допов без НДС (цена продажи допов минус себес допов)
   let dopMarginNoVat = (saleDops - costDops) / 1.22;
 
-  // Металл без НДС
-  let metalMarginNoVat = (finalPrice - costCar - zavyshenie - costDops) / 1.22;
+  // Металл без НДС: ТОЛЬКО цена авто и себес авто.
+  // costDops убрали (он уже учтён в dopMarginNoVat).
+  // zavyshenie вынесли из скобки — оно без НДС, не делим.
+  let metalMarginNoVat = (finalPrice - costCar) / 1.22 - zavyshenie;
 
   // ЖОК
- let zhokOmoda  = Math.round(
-    (metalMarginNoVat || 0) 
-    + (dopMarginNoVat || 0) 
-    + support 
+  let zhokOmoda  = Math.round(
+    (metalMarginNoVat || 0)
+    + (dopMarginNoVat || 0)
+    + support
     + (oksMargin / 1.22)
   );
 
-let zhokBelgee = Math.round(
-    (metalMarginNoVat || 0) 
-    + (dopMarginNoVat || 0) 
-    + (support / 1.22) 
+  let zhokBelgee = Math.round(
+    (metalMarginNoVat || 0)
+    + (dopMarginNoVat || 0)
+    + (support / 1.22)
     + (oksMargin / 1.22)
   );
 
