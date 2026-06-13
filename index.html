@@ -1712,23 +1712,21 @@ function calculateMargin() {
   let dopMarginNoVat = (saleDops - costDops) / 1.22;
 
   // Металл без НДС
-  let metalMarginNoVat = (finalPrice - costCar - costDops) / 1.22;
+  let metalMarginNoVat = (finalPrice - costCar - zavyshenie - costDops) / 1.22;
 
   // ЖОК
-  let zhokOmoda  = Math.round(
+ let zhokOmoda  = Math.round(
     (metalMarginNoVat || 0) 
     + (dopMarginNoVat || 0) 
     + support 
-    + (oksMargin / 1.22) 
-    - zavyshenie
+    + (oksMargin / 1.22)
   );
 
-  let zhokBelgee = Math.round(
+let zhokBelgee = Math.round(
     (metalMarginNoVat || 0) 
     + (dopMarginNoVat || 0) 
     + (support / 1.22) 
-    + (oksMargin / 1.22) 
-    - zavyshenie
+    + (oksMargin / 1.22)
   );
 
   // Вывод маржи допов
