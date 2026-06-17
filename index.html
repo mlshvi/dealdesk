@@ -1951,12 +1951,18 @@ function populateBrandList() {
   const selBrand = $('catBrand'); if (!selBrand) return;
   selBrand.innerHTML = '<option value="">-- Выберите бренд --</option>';
   Object.keys(CATALOG).forEach(brand => selBrand.options.add(new Option(brand, brand)));
+  selBrand.options.add(new Option('🔧 Другой бренд', '__other__'));
 }
 
 function updateModels() {
   const selBrand = $('catBrand'), selModel = $('catModel'), selTrim = $('catTrim');
   if (!selBrand || !selModel || !selTrim) return;
   selModel.innerHTML = '<option value="">-- Выберите модель --</option>'; selTrim.innerHTML = '<option value="">-- Выберите комплектацию --</option>'; selTrim.disabled = true;
+  if (selBrand.value === '__other__') {
+    selModel.disabled = true;
+    applyOtherBrand();
+    return;
+  }
   if (selBrand.value && CATALOG[selBrand.value]) { 
       selModel.disabled = false; Object.keys(CATALOG[selBrand.value]).forEach(model => selModel.options.add(new Option(model, model))); 
   } else { selModel.disabled = true; }
@@ -1994,6 +2000,21 @@ function applyCatalog() {
   db.imgCars = []; saveDB(); renderGallery(); renderKP(); calculateMargin(); calculateOjMargin();
   calculateCredit('price'); // Пересчет кредита при загрузке цены из каталога
   showToast("✅ Автомобиль загружен из каталога");
+}
+
+function applyOtherBrand() {
+  ['vCarName','vCarPkg','vCarVIN','vCarColor','vCarSpecs','vCarEq','vCarStdEq',
+   'vPriceOld','vPriceNew','calcCostCar','calcCostDops','calcSaleDops',
+   'calcZavyshenie','calcSupport','calcFin','ojFactPaid','ojBasePrice','ojDiscount',
+   'creditInitialRub','creditInitialPct','creditKasko','creditFinProducts','creditDopsMargin'
+  ].forEach(id => setVal(id, ''));
+  document.querySelectorAll('.dop-check').forEach(cb => cb.checked = false);
+  if ($('useTISupport')) $('useTISupport').checked = false;
+  if ($('showCreditInKP')) $('showCreditInKP').checked = false;
+  if ($('creditIncludeExtras')) $('creditIncludeExtras').checked = true;
+  db.imgCars = []; currentCatalogSupport = ""; saveDB();
+  renderGallery(); renderKP(); calculateMargin(); calculateOjMargin(); calculateCredit('price');
+  showToast('✏️ Режим "Другой бренд" — заполните данные вручную');
 }
 
 function normalizeCarKey(name) { return (name || '').toLowerCase().replace(/\s+/g, '').replace(/plus/g, '+'); }
