@@ -1056,29 +1056,11 @@ body.mobile-view .official-photo-grid{
   body.light-theme .card .btn-red:hover{
   background:rgba(220,38,38,.15) !important;
 }
-/* Официальный бланк: 3 фото в ряд вверху */
-.theme-official .doc-photo{ width:100% !important; }
-.theme-official .doc-photo-box{
-  display:grid !important;
-  gap:8px !important;
-  width:100% !important;
-}
-.theme-official .doc-photo-box[data-count="1"]{ grid-template-columns:1fr !important; }
-.theme-official .doc-photo-box[data-count="2"]{ grid-template-columns:1fr 1fr !important; }
-.theme-official .doc-photo-box[data-count="3"]{ grid-template-columns:1fr 1fr 1fr !important; }
-
-.theme-official .doc-photo-box img{
-  width:100% !important;
-  object-fit:cover !important;
-  object-position:center !important;
-  max-width:none !important;
-  max-height:none !important;
-  border-radius:4px !important;
-  display:block !important;
-}
-.theme-official .doc-photo-box[data-count="1"] img{ height:150px !important; }
-.theme-official .doc-photo-box[data-count="2"] img{ height:120px !important; }
-.theme-official .doc-photo-box[data-count="3"] img{ height:95px !important; }
+/* Официальный бланк — фото справа как в Премиум */
+.theme-official .doc-main{ flex-direction:row !important; }
+.theme-official .doc-photo{ width:45% !important; justify-content:flex-end !important; align-items:flex-start !important; }
+.theme-official .doc-photo-box{ display:flex !important; justify-content:flex-end !important; width:100% !important; }
+.theme-official .doc-photo-box img{ max-width:100% !important; max-height:220px !important; border-radius:4px !important; object-fit:cover !important; }
 
 </style>
 </style>
@@ -2655,14 +2637,17 @@ function downloadPDF() {
   const wasMobile = document.body.classList.contains('mobile-view');
   const curTheme = val('vTheme');
 
-  document.body.classList.remove('mobile-view');
+    document.body.classList.remove('mobile-view');
   element.style.width = '210mm';
   element.style.height = 'auto';
   element.style.minHeight = '0';
+  element.style.overflow = 'visible';
 
   // Для catalog — добавляем компактный класс чтобы всё влезло
   if (curTheme === 'catalog') {
     element.classList.add('pdf-render-mode');
+    element.style.minHeight = '0';
+    element.style.height = 'auto';
   }
   // Для official — убираем min-height
   element.id = 'document-container';
@@ -2811,13 +2796,14 @@ function downloadPDF() {
       errPDF();
     });
 
-    function finishPDF() {
+        function finishPDF() {
       pdf.save(fileName);
       if (galleryWasVisible) gallery.style.display = 'block';
       if (wasMobile) document.body.classList.add('mobile-view');
       element.style.width = '';
       element.style.height = '';
       element.style.minHeight = '';
+      element.style.overflow = '';
       element.classList.remove('pdf-render-mode');
       btn.textContent = originalText;
       btn.disabled = false;
