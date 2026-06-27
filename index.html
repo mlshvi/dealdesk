@@ -2687,7 +2687,7 @@ function downloadPDF() {
       // Захватываем только реальную высоту контента, без пустого пространства
       height: element.scrollHeight,
       windowHeight: element.scrollHeight
-    }).then(canvasKP => {
+  }).then(async (canvasKP) => {
 
       // Убираем компактный класс сразу после захвата
       element.classList.remove('pdf-render-mode');
