@@ -1579,6 +1579,57 @@ if (typeof db.counter !== 'number') db.counter = 1;
 if (typeof db.imgLogo !== 'string') db.imgLogo = '';
 
 const saveDB = () => localStorage.setItem('kp_db_v24', JSON.stringify(db));
+  // ==========================================
+// 4. ПЕРЕКЛЮЧАТЕЛЬ ТЕМЫ (Dark / Light)
+// ==========================================
+
+const THEME_KEY = 'dd_theme';
+
+// Применяем тему при загрузке страницы,
+// согласно значению в localStorage.[16][17]
+function applyInitialTheme() {
+  try {
+    const saved = localStorage.getItem(THEME_KEY);
+    const isLight = saved === 'light';
+
+    if (isLight) {
+      document.body.classList.add('light-theme');
+    } else {
+      document.body.classList.remove('light-theme');
+    }
+
+    const switcher = $('themeSwitcher');
+    if (switcher) {
+      // В светлой теме показываем солнце, в тёмной — луну
+      switcher.textContent = isLight ? '☀️' : '🌙';
+    }
+  } catch (e) {
+    // В случае ошибки доступа к localStorage просто оставляем тему по умолчанию
+  }
+}
+
+// Функция переключения темы по клику на кнопку.[16][17]
+function toggleTheme() {
+  const isLightNow = document.body.classList.contains('light-theme');
+  const willBeLight = !isLightNow;
+
+  if (willBeLight) {
+    document.body.classList.add('light-theme');
+    localStorage.setItem(THEME_KEY, 'light');
+  } else {
+    document.body.classList.remove('light-theme');
+    localStorage.setItem(THEME_KEY, 'dark');
+  }
+
+  const switcher = $('themeSwitcher');
+  if (switcher) {
+    switcher.textContent = willBeLight ? '☀️' : '🌙';
+  }
+}
+
+// Вызываем инициализацию сразу после определения функций,
+// так как <script> подключён в конце документа и DOM уже загружен.
+applyInitialTheme();
 
 // ==========================================
 // 3. БАЗА ТЕКСТОВ И КОМПЛЕКТАЦИЙ
@@ -2570,44 +2621,137 @@ function renderLists() {
 }
 
 function downloadPDF() {
-  const btn = $('btn-pdf'); if (!btn) return;
+  const btn = $('btn-pdf'); 
+  if (!btn) return;
+
   const originalText = btn.textContent;
-  btn.textContent = '⏳ Делаем PDF...'; btn.disabled = true;
+  btn.textContent = '⏳ Делаем PDF...';
+  btn.disabled = true;
 
   const element = $('document-container');
   const gallery = $('outOfficialGallery');
   const wasMobile = document.body.classList.contains('mobile-view');
+
+  // Приводим документ к ширине A4
   document.body.classList.remove('mobile-view');
-  element.style.width = '210mm'; element.style.height = 'auto';
+  element.style.width = '210mm';
+  element.style.height = 'auto';
 
   const galleryWasVisible = gallery && gallery.style.display !== 'none' && gallery.innerHTML.trim() !== '';
 
   let fileName = 'КП_Автосалон.pdf';
-  if (val('vCarName')) fileName = `КП_${val('vCarName').replace(/\s+/g, '_')}.pdf`;
+  if (val('vCarName')) {
+    fileName = `КП_${val('vCarName').replace(/\s+/g, '_')}.pdf`;
+  }
 
   setTimeout(() => {
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF('p', 'mm', 'a4');
-    const pdfWidth = 210, pdfHeight = 297;
+    const pdfWidth = 210;
+    const pdfHeight = 297;
 
-    if (galleryWasVisible) gallery.style.display = 'none';
+    // Лёгкая коррекция внутреннего масштаба jsPDF для улучшения качества картинок
+    // (см. рекомендации в issue #762 jsPDF)[1]
+    if (pdf.internal && typeof pdf.internal.scaleFactor === 'number') {
+      pdf.internal.scaleFactor = 1.33;
+    }
 
-    html2canvas(element, { scale: 3, useCORS: true }).then(canvasKP => {
-      const kpImgH = (canvasKP.height * pdfWidth) / canvasKP.width;
-      pdf.addImage(canvasKP.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, pdfWidth, kpImgH);
+    // Если есть доп. галерея, временно её прячем
+    if (galleryWasVisible) {
+      gallery.style.display = 'none';
+    }
 
-      if (!galleryWasVisible) { finishPDF(); return; }
+    // Дополнительно подстраиваем inline‑стили фото в хедерах для темы "Бланк",
+    // чтобы html2canvas корректнее отрисовал object-fit (см. обсуждения html2canvas)[2][7]
+    const curTheme = val('vTheme');
+    if (curTheme === 'official') {
+      const headerImgs = element.querySelectorAll('.theme-official #outCarImg img');
+      const count = headerImgs.length;
+      headerImgs.forEach(im => {
+        im.style.width = '100%';
+        im.style.objectFit = 'cover';
+        im.style.objectPosition = 'center';
+        im.style.display = 'block';
+        if (count === 1) {
+          im.style.height = '150px';
+        } else if (count === 2) {
+          im.style.height = '120px';
+        } else {
+          im.style.height = '95px';
+        }
+      });
+    }
+
+    // Рендерим основной документ в canvas
+    html2canvas(element, { scale: 2, useCORS: true }).then(canvasKP => {
+      const pageCanvas = document.createElement('canvas');
+      const ctx = pageCanvas.getContext('2d');
+
+      pageCanvas.width = canvasKP.width;
+
+      // Высота одного "листа" в пикселях canvas'а
+      const pageCanvasH = Math.floor(canvasKP.width * (pdfHeight / pdfWidth));
+
+      let pos = 0;
+      let isFirstPage = true;
+
+      // Делим основной документ на несколько страниц, чтобы не обрезать блок менеджера
+      // (аналогично рекомендуемым паттернам разбиения html2canvas‑canvas).[9][10][15]
+      while (pos < canvasKP.height) {
+        let h = Math.min(pageCanvasH, canvasKP.height - pos);
+
+        pageCanvas.height = h;
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, pageCanvas.width, h);
+
+        ctx.drawImage(
+          canvasKP,
+          0, pos,
+          canvasKP.width, h,
+          0, 0,
+          canvasKP.width, h
+        );
+
+        const sliceH = (h * pdfWidth) / canvasKP.width;
+        const dataUrl = pageCanvas.toDataURL('image/jpeg', 0.95);
+
+        if (isFirstPage) {
+          // Первая страница
+          pdf.addImage(dataUrl, 'JPEG', 0, 0, pdfWidth, sliceH);
+          isFirstPage = false;
+        } else {
+          // Последующие страницы
+          pdf.addPage();
+          pdf.addImage(dataUrl, 'JPEG', 0, 0, pdfWidth, sliceH);
+        }
+
+        pos += h;
+      }
+
+      // Если галереи нет — сохраняем PDF и завершаем
+      if (!galleryWasVisible) {
+        finishPDF();
+        return;
+      }
+
+      // === Вторая часть: отдельный лист(ы) для outOfficialGallery ===
 
       gallery.style.display = 'block';
+
       const tempWrap = document.createElement('div');
       tempWrap.className = 'theme-official';
-      tempWrap.style.cssText = 'position:absolute; left:-9999px; top:0; width:210mm; background:#fff; padding:15mm; box-sizing:border-box;';
+      tempWrap.style.cssText =
+        'position:absolute; left:-9999px; top:0; width:210mm; ' +
+        'background:#fff; padding:15mm; box-sizing:border-box;';
+
       const galleryClone = gallery.cloneNode(true);
       galleryClone.style.display = 'block';
       galleryClone.style.pageBreakBefore = 'auto';
       tempWrap.appendChild(galleryClone);
       document.body.appendChild(tempWrap);
 
+      // Принудительно задаём размеры фото в галерее, чтобы html2canvas
+      // не исказил их при рендере (см. рекомендации по scale и DPI).[2][6][12]
       galleryClone.querySelectorAll('img').forEach(im => {
         im.style.width = '100%';
         im.style.height = '188px';
@@ -2618,45 +2762,86 @@ function downloadPDF() {
         im.style.border = '1px solid #d1d5db';
       });
 
-      html2canvas(tempWrap, { scale: 3, useCORS: true }).then(canvasG => {
+      html2canvas(tempWrap, { scale: 2, useCORS: true }).then(canvasG => {
         document.body.removeChild(tempWrap);
 
-        const pageCanvasH = Math.floor(canvasG.width * (pdfHeight / pdfWidth));
-        let pos = 0;
-        const pageCanvas = document.createElement('canvas');
-        const ctx = pageCanvas.getContext('2d');
-        pageCanvas.width = canvasG.width;
+        const pageCanvasH2 = Math.floor(canvasG.width * (pdfHeight / pdfWidth));
+        let pos2 = 0;
+        const pageCanvas2 = document.createElement('canvas');
+        const ctx2 = pageCanvas2.getContext('2d');
+        pageCanvas2.width = canvasG.width;
 
-        while (pos < canvasG.height) {
-          let h = Math.min(pageCanvasH, canvasG.height - pos);
-          pageCanvas.height = h;
-          ctx.fillStyle = '#fff';
-          ctx.fillRect(0, 0, pageCanvas.width, h);
-          ctx.drawImage(canvasG, 0, pos, canvasG.width, h, 0, 0, canvasG.width, h);
-          const sliceH = (h * pdfWidth) / canvasG.width;
+        while (pos2 < canvasG.height) {
+          let h2 = Math.min(pageCanvasH2, canvasG.height - pos2);
+          pageCanvas2.height = h2;
+
+          ctx2.fillStyle = '#fff';
+          ctx2.fillRect(0, 0, pageCanvas2.width, h2);
+
+          ctx2.drawImage(
+            canvasG,
+            0, pos2,
+            canvasG.width, h2,
+            0, 0,
+            canvasG.width, h2
+          );
+
+          const sliceH2 = (h2 * pdfWidth) / canvasG.width;
           pdf.addPage();
-          pdf.addImage(pageCanvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, pdfWidth, sliceH);
-          pos += h;
-        }
-        finishPDF();
-      }).catch(err => { document.body.removeChild(tempWrap); errPDF(); });
+          pdf.addImage(
+            pageCanvas2.toDataURL('image/jpeg', 0.95),
+            'JPEG',
+            0,
+            0,
+            pdfWidth,
+            sliceH2
+          );
 
-    }).catch(err => { errPDF(); });
+          pos2 += h2;
+        }
+
+        finishPDF();
+      }).catch(err => {
+        document.body.removeChild(tempWrap);
+        errPDF();
+      });
+
+    }).catch(err => {
+      errPDF();
+    });
 
     function finishPDF() {
       pdf.save(fileName);
-      if (galleryWasVisible) gallery.style.display = 'block';
-      if (wasMobile) document.body.classList.add('mobile-view');
+
+      if (galleryWasVisible) {
+        gallery.style.display = 'block';
+      }
+      if (wasMobile) {
+        document.body.classList.add('mobile-view');
+      }
       element.style.width = '';
-      btn.textContent = originalText; btn.disabled = false;
-      showToast("✅ PDF успешно скачан!");
+      element.style.height = '';
+
+      btn.textContent = originalText;
+      btn.disabled = false;
+
+      showToast('✅ PDF успешно скачан!');
     }
-       function errPDF() {
-      if (galleryWasVisible) gallery.style.display = 'block';
-      if (wasMobile) document.body.classList.add('mobile-view');
+
+    function errPDF() {
+      if (galleryWasVisible) {
+        gallery.style.display = 'block';
+      }
+      if (wasMobile) {
+        document.body.classList.add('mobile-view');
+      }
       element.style.width = '';
-      btn.textContent = originalText; btn.disabled = false;
-      showToast("❌ Ошибка PDF", true);
+      element.style.height = '';
+
+      btn.textContent = originalText;
+      btn.disabled = false;
+
+      showToast('❌ Ошибка PDF', true);
     }
   }, 300);
 }
