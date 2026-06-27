@@ -2651,7 +2651,7 @@ function downloadPDF() {
       btn.textContent = originalText; btn.disabled = false;
       showToast("✅ PDF успешно скачан!");
     }
-    function errPDF() {
+       function errPDF() {
       if (galleryWasVisible) gallery.style.display = 'block';
       if (wasMobile) document.body.classList.add('mobile-view');
       element.style.width = '';
@@ -2659,7 +2659,6 @@ function downloadPDF() {
       showToast("❌ Ошибка PDF", true);
     }
   }, 300);
-}
 }
 
 function autoResizeAiInput(el) {
