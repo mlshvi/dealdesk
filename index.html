@@ -2114,9 +2114,9 @@ const vImg = $('vCarImg');
 if (vImg) {
   vImg.addEventListener('change', async function () {
     if (!this.files || !this.files.length) return; 
-    const files = Array.from(this.files).slice(0, 10); let newPhotos = [];
+    const files = Array.from(this.files).slice(0, 11); let newPhotos = [];
     for(let file of files) { await new Promise(res => { compressImage(file, compressed => { newPhotos.push(compressed); res(); }); }); }
-    db.imgCars = [...(db.imgCars || []), ...newPhotos].slice(0, 10); saveDB(); renderGallery(); renderKP(); this.value = '';
+    db.imgCars = [...(db.imgCars || []), ...newPhotos].slice(0, 11); saveDB(); renderGallery(); renderKP(); this.value = '';
   });
 }
 
@@ -2466,12 +2466,14 @@ function renderKP() {
   if (db.imgCars && db.imgCars.length > 0) { imagesToRender = db.imgCars; } else if (carKey && AUTO_IMAGES[carKey]) { imagesToRender = [AUTO_IMAGES[carKey]]; }
   const curTheme = val('vTheme');
 
-  // Сколько фото показываем вверху:
-  // official — до 3 фото вверху, catalog — все, premium — только 1
+    // Сколько фото показываем вверху:
+  // official — до 3 фото вверху, catalog — до 3, premium — только 1
   let mainImages = imagesToRender;
   if (curTheme === 'official') {
     mainImages = imagesToRender.slice(0, 3);
-  } else if (curTheme !== 'catalog' && imagesToRender.length > 0) {
+  } else if (curTheme === 'catalog') {
+    mainImages = imagesToRender.slice(0, 3);
+  } else if (imagesToRender.length > 0) {
     mainImages = [imagesToRender[0]];
   }
   if (photoBox) {
@@ -2578,7 +2580,6 @@ function downloadPDF() {
   document.body.classList.remove('mobile-view');
   element.style.width = '210mm'; element.style.height = 'auto';
 
-  // Запоминаем, была ли галерея видимой
   const galleryWasVisible = gallery && gallery.style.display !== 'none' && gallery.innerHTML.trim() !== '';
 
   let fileName = 'КП_Автосалон.pdf';
@@ -2589,24 +2590,17 @@ function downloadPDF() {
     const pdf = new jsPDF('p', 'mm', 'a4');
     const pdfWidth = 210, pdfHeight = 297;
 
-    // === ШАГ 1: рендерим КП БЕЗ галереи ===
     if (galleryWasVisible) gallery.style.display = 'none';
 
     html2canvas(element, { scale: 3, useCORS: true }).then(canvasKP => {
       const kpImgH = (canvasKP.height * pdfWidth) / canvasKP.width;
       pdf.addImage(canvasKP.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, pdfWidth, kpImgH);
 
-      // Если галереи нет — сохраняем и выходим
-      if (!galleryWasVisible) {
-        finishPDF();
-        return;
-      }
+      if (!galleryWasVisible) { finishPDF(); return; }
 
-      // === ШАГ 2: рендерим ТОЛЬКО галерею ===
-           gallery.style.display = 'block';
-      // временно вынимаем галерею в отдельный контейнер шириной 210мм
+      gallery.style.display = 'block';
       const tempWrap = document.createElement('div');
-      tempWrap.className = 'theme-official'; // ← ВАЖНО: возвращаем класс темы
+      tempWrap.className = 'theme-official';
       tempWrap.style.cssText = 'position:absolute; left:-9999px; top:0; width:210mm; background:#fff; padding:15mm; box-sizing:border-box;';
       const galleryClone = gallery.cloneNode(true);
       galleryClone.style.display = 'block';
@@ -2614,7 +2608,6 @@ function downloadPDF() {
       tempWrap.appendChild(galleryClone);
       document.body.appendChild(tempWrap);
 
-      // Принудительно фиксируем размеры фото для html2canvas (он не понимает object-fit на клонах)
       galleryClone.querySelectorAll('img').forEach(im => {
         im.style.width = '100%';
         im.style.height = '188px';
@@ -2625,42 +2618,17 @@ function downloadPDF() {
         im.style.border = '1px solid #d1d5db';
       });
 
-               // высота одной "рабочей зоны" листа в пикселях канваса
+      html2canvas(tempWrap, { scale: 3, useCORS: true }).then(canvasG => {
+        document.body.removeChild(tempWrap);
+
         const pageCanvasH = Math.floor(canvasG.width * (pdfHeight / pdfWidth));
         let pos = 0;
         const pageCanvas = document.createElement('canvas');
         const ctx = pageCanvas.getContext('2d');
         pageCanvas.width = canvasG.width;
 
-        // вспомогательный канвас для анализа строк на "пустоту" (белый фон между фото)
-        const probe = document.createElement('canvas');
-        probe.width = canvasG.width; probe.height = canvasG.height;
-        const pctx = probe.getContext('2d');
-        pctx.drawImage(canvasG, 0, 0);
-
-        function isRowEmpty(y) {
-          // считаем строку "пустой", если она почти вся белая
-          try {
-            const data = pctx.getImageData(0, y, canvasG.width, 1).data;
-            let nonWhite = 0;
-            for (let i = 0; i < data.length; i += 4 * 10) { // выборка каждый 10-й пиксель
-              if (data[i] < 245 || data[i+1] < 245 || data[i+2] < 245) nonWhite++;
-            }
-            return nonWhite < 3;
-          } catch(e) { return false; }
-        }
-
         while (pos < canvasG.height) {
           let h = Math.min(pageCanvasH, canvasG.height - pos);
-
-          // если это не последний кусок — ищем ближайшую "пустую" линию выше, чтобы не резать фото
-          if (pos + h < canvasG.height) {
-            let cut = pos + h;
-            const minCut = pos + Math.floor(pageCanvasH * 0.6); // не отрезаем слишком мало
-            while (cut > minCut && !isRowEmpty(cut)) cut--;
-            if (cut > minCut) h = cut - pos;
-          }
-
           pageCanvas.height = h;
           ctx.fillStyle = '#fff';
           ctx.fillRect(0, 0, pageCanvas.width, h);
@@ -2692,91 +2660,6 @@ function downloadPDF() {
     }
   }, 300);
 }
-
-function downloadImage() {
-  const btn = $('btn-img'); if (!btn) return;
-  const originalText = btn.textContent; btn.textContent = '⏳ Делаем фото...'; btn.disabled = true;
-  const wasMobile = document.body.classList.contains('mobile-view'); document.body.classList.remove('mobile-view');
-  const element = $('document-container'); element.style.width = '800px';
-
-  setTimeout(() => {
-    html2canvas(element, { scale: 2, useCORS: true }).then(canvas => {
-      if (wasMobile) document.body.classList.add('mobile-view'); element.style.width = '';
-      let fileName = 'КП_Автосалон.jpg'; if (val('vCarName')) fileName = `КП_${val('vCarName').replace(/\s+/g, '_')}.jpg`;
-      const link = document.createElement('a'); link.download = fileName; link.href = canvas.toDataURL('image/jpeg', 0.9); link.click();
-      btn.textContent = originalText; btn.disabled = false; showToast("✅ Фото успешно скачано!");
-    }).catch(e => {
-      btn.textContent = originalText; btn.disabled = false; showToast("❌ Ошибка фото", true);
-    });
-  }, 200);
-}
-
-// ==========================================
-// ЗАПУСК: 100% ГАРАНТИЯ ЗАГРУЗКИ БЕЗ ЗАВИСАНИЙ
-// ==========================================
-try {
-  populateBrandList(); 
-  renderDopsUI(); 
-  renderLists(); 
-  renderGallery(); 
-  renderKP(); 
-  calculateMargin(); 
-  syncFinToCredit();
-  calculateOjMargin();
-} catch (error) {
-  // ЕСЛИ КЭШ БРАУЗЕРА УБИТ НАПРОЧЬ — СБРАСЫВАЕМ И ВОССТАНАВЛИВАЕМ
-  console.error(error);
-  localStorage.removeItem('kp_db_v24');
-  alert("Браузер повредил старые файлы. Мы восстановили работу.");
-  location.reload();
-}
-// ==========================================
-// ПЕРЕКЛЮЧАТЕЛЬ ТЕМЫ
-// ==========================================
-const SUN_ICON = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>`;
-
-const MOON_ICON = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>`;
-
-function applyTheme(theme){
-  const switcher = $('themeSwitcher');
-  if(theme === 'light'){
-    document.body.classList.add('light-theme');
-    if(switcher) switcher.innerHTML = SUN_ICON;
-  } else {
-    document.body.classList.remove('light-theme');
-    if(switcher) switcher.innerHTML = MOON_ICON;
-  }
-}
-function toggleTheme(){
-  const isLight = document.body.classList.contains('light-theme');
-  const newTheme = isLight ? 'dark' : 'light';
-  localStorage.setItem('kp_theme', newTheme);
-  applyTheme(newTheme);
-}
-// При загрузке восстанавливаем сохранённую тему
-applyTheme(localStorage.getItem('kp_theme') || 'dark');
-  // ==========================================
-// AI ЧАТ-АССИСТЕНТ
-// ==========================================
-const AI_WORKER_URL = 'https://dealdesk-ai.mlshvi.workers.dev';
-let aiChatHistory = [];
-let aiIsLoading = false;
-
-function toggleAiChat() {
-  const win = $('aiChatWindow');
-  const btn = $('aiChatButton');
-  if (!win || !btn) return;
-  
-  if (win.classList.contains('active')) {
-    win.classList.remove('active');
-  } else {
-    win.classList.add('active');
-    btn.classList.remove('has-notification');
-    setTimeout(() => {
-      const input = $('aiChatInput');
-      if (input) input.focus();
-    }, 300);
-  }
 }
 
 function autoResizeAiInput(el) {
