@@ -2519,49 +2519,91 @@ function renderLists() {
 
 function downloadPDF() {
   const btn = $('btn-pdf'); if (!btn) return;
-  const originalText = btn.textContent; btn.textContent = '⏳ Делаем PDF...'; btn.disabled = true;
-  const element = $('document-container'); const wasMobile = document.body.classList.contains('mobile-view'); document.body.classList.remove('mobile-view');
-  element.style.width = '210mm'; element.style.height = 'auto'; 
+  const originalText = btn.textContent;
+  btn.textContent = '⏳ Делаем PDF...'; btn.disabled = true;
+
+  const element = $('document-container');
+  const gallery = $('outOfficialGallery');
+  const wasMobile = document.body.classList.contains('mobile-view');
+  document.body.classList.remove('mobile-view');
+  element.style.width = '210mm'; element.style.height = 'auto';
+
+  // Запоминаем, была ли галерея видимой
+  const galleryWasVisible = gallery && gallery.style.display !== 'none' && gallery.innerHTML.trim() !== '';
+
+  let fileName = 'КП_Автосалон.pdf';
+  if (val('vCarName')) fileName = `КП_${val('vCarName').replace(/\s+/g, '_')}.pdf`;
 
   setTimeout(() => {
-    html2canvas(element, { scale: 3, useCORS: true }).then(canvas => {
-      const { jsPDF } = window.jspdf; const pdf = new jsPDF('p', 'mm', 'a4');
-      const pdfWidth = 210; const pdfHeight = 297;
-      const imgWidth = pdfWidth;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pdfWidth = 210, pdfHeight = 297;
 
-      let fileName = 'КП_Автосалон.pdf'; if (val('vCarName')) fileName = `КП_${val('vCarName').replace(/\s+/g, '_')}.pdf`;
+    // === ШАГ 1: рендерим КП БЕЗ галереи ===
+    if (galleryWasVisible) gallery.style.display = 'none';
 
-      if (imgHeight <= pdfHeight) {
-        // влезает на один лист
-        const imgData = canvas.toDataURL('image/jpeg', 0.95);
-        pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
-      } else {
-        // режем на несколько листов
-        const pageCanvasH = Math.floor(canvas.width * (pdfHeight / pdfWidth));
-        let pos = 0; let page = 0;
+    html2canvas(element, { scale: 3, useCORS: true }).then(canvasKP => {
+      const kpImgH = (canvasKP.height * pdfWidth) / canvasKP.width;
+      pdf.addImage(canvasKP.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, pdfWidth, kpImgH);
+
+      // Если галереи нет — сохраняем и выходим
+      if (!galleryWasVisible) {
+        finishPDF();
+        return;
+      }
+
+      // === ШАГ 2: рендерим ТОЛЬКО галерею ===
+      gallery.style.display = 'block';
+      // временно вынимаем галерею в отдельный контейнер шириной 210мм
+      const tempWrap = document.createElement('div');
+      tempWrap.style.cssText = 'position:absolute; left:-9999px; top:0; width:210mm; background:#fff; padding:15mm; box-sizing:border-box;';
+      const galleryClone = gallery.cloneNode(true);
+      galleryClone.style.display = 'block';
+      galleryClone.style.pageBreakBefore = 'auto';
+      tempWrap.appendChild(galleryClone);
+      document.body.appendChild(tempWrap);
+
+      html2canvas(tempWrap, { scale: 3, useCORS: true }).then(canvasG => {
+        document.body.removeChild(tempWrap);
+
+        // высота одной "рабочей зоны" листа в пикселях канваса
+        const pageCanvasH = Math.floor(canvasG.width * (pdfHeight / pdfWidth));
+        let pos = 0;
         const pageCanvas = document.createElement('canvas');
         const ctx = pageCanvas.getContext('2d');
-        pageCanvas.width = canvas.width;
-        while (pos < canvas.height) {
-          const h = Math.min(pageCanvasH, canvas.height - pos);
+        pageCanvas.width = canvasG.width;
+
+        while (pos < canvasG.height) {
+          const h = Math.min(pageCanvasH, canvasG.height - pos);
           pageCanvas.height = h;
           ctx.fillStyle = '#fff';
           ctx.fillRect(0, 0, pageCanvas.width, h);
-          ctx.drawImage(canvas, 0, pos, canvas.width, h, 0, 0, canvas.width, h);
-          const sliceData = pageCanvas.toDataURL('image/jpeg', 0.95);
-          const sliceH = (h * imgWidth) / canvas.width;
-          if (page > 0) pdf.addPage();
-          pdf.addImage(sliceData, 'JPEG', 0, 0, imgWidth, sliceH);
-          pos += h; page++;
+          ctx.drawImage(canvasG, 0, pos, canvasG.width, h, 0, 0, canvasG.width, h);
+          const sliceH = (h * pdfWidth) / canvasG.width;
+          pdf.addPage();
+          pdf.addImage(pageCanvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, pdfWidth, sliceH);
+          pos += h;
         }
-      }
+        finishPDF();
+      }).catch(err => { document.body.removeChild(tempWrap); errPDF(); });
 
-      pdf.save(fileName); if (wasMobile) document.body.classList.add('mobile-view'); element.style.width = '';
-      btn.textContent = originalText; btn.disabled = false; showToast("✅ PDF успешно скачан!");
-    }).catch(e => {
-      btn.textContent = originalText; btn.disabled = false; showToast("❌ Ошибка PDF", true);
-    });
+    }).catch(err => { errPDF(); });
+
+    function finishPDF() {
+      pdf.save(fileName);
+      if (galleryWasVisible) gallery.style.display = 'block';
+      if (wasMobile) document.body.classList.add('mobile-view');
+      element.style.width = '';
+      btn.textContent = originalText; btn.disabled = false;
+      showToast("✅ PDF успешно скачан!");
+    }
+    function errPDF() {
+      if (galleryWasVisible) gallery.style.display = 'block';
+      if (wasMobile) document.body.classList.add('mobile-view');
+      element.style.width = '';
+      btn.textContent = originalText; btn.disabled = false;
+      showToast("❌ Ошибка PDF", true);
+    }
   }, 300);
 }
 
