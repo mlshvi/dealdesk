@@ -1179,8 +1179,8 @@ body.mobile-view .official-photo-grid{
         </div>
        <div class="margin-result">
   <div style="font-weight:normal; font-size:11px; margin-bottom:8px; line-height:1.3;">
-    <div><b>Omoda/Jaecoo:</b> (Цена - Авто - Допы)/1.22 + Маржа допов/1.22 + Поддержка + Маржа ОКС/1.22 - Завышение</div>
-    <div><b>Belgee:</b> (Цена - Авто - Допы)/1.22 + Маржа допов/1.22 + Поддержка/1.22 + Маржа ОКС/1.22 - Завышение</div>
+    <div><b>Omoda/Jaecoo:</b> ((Цена - Завышение) - Авто)/1.22 + Маржа допов/1.22 + Поддержка + Маржа ОКС/1.22</div>
+<div><b>Belgee:</b> ((Цена - Завышение) - Авто)/1.22 + Маржа допов/1.22 + Поддержка/1.22 + Маржа ОКС/1.22</div>
     <div style="margin-top:4px; color:#3a6ae8 !important;">
       Маржа ОКС = 85% от суммы фин. продуктов
     </div>
@@ -1840,7 +1840,7 @@ function calculateMargin() {
   // Металл без НДС: ТОЛЬКО цена авто и себес авто.
   // costDops убрали (он уже учтён в dopMarginNoVat).
   // zavyshenie вынесли из скобки — оно без НДС, не делим.
-  let metalMarginNoVat = (finalPrice - costCar) / 1.22 - zavyshenie;
+  let metalMarginNoVat = ((finalPrice - zavyshenie) - costCar) / 1.22;
 
   // ЖОК
   let zhokOmoda  = Math.round(
