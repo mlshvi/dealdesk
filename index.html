@@ -18,16 +18,22 @@
 #scheduleTable td{padding:7px 6px;border-bottom:1px solid rgba(255,255,255,.04);color:rgba(255,255,255,.75);text-align:right}#scheduleTable tr:hover td{background:rgba(48,209,88,.06)}#scheduleTable tr:nth-child(12n) td{border-bottom:2px solid rgba(48,209,88,.15)}.sched-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:12px;text-align:center}.sched-card div:first-child{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:rgba(255,255,255,.4);margin-bottom:4px}.sched-card div:last-child{font-size:16px;font-weight:700;color:#c0c0c0}
   /* ===== ПАТЧ PDF ===== */
 .pdf-render-mode .theme-catalog .doc-photo-box[data-count="2"] img,
-.pdf-render-mode .theme-catalog .doc-photo-box[data-count="3"] img{height:160px !important;}
-.pdf-render-mode .theme-catalog .doc-photo-box[data-count="1"] img{max-height:220px !important;}
-.pdf-render-mode .doc-car-name{font-size:18px !important;}
-.pdf-render-mode .doc-specs{font-size:11px !important;line-height:1.3 !important;}
-.pdf-render-mode .doc-equip{font-size:10px !important;line-height:1.3 !important;}
-.pdf-render-mode .doc-footer{margin-bottom:10px !important;padding-top:10px !important;}
-.pdf-render-mode .doc-price-box{padding:10px !important;margin-bottom:10px !important;}
-.pdf-render-mode .doc-price-new{font-size:22px !important;}
-.pdf-render-mode #stdEqBlock{margin-bottom:8px !important;}
-.pdf-render-mode #dealerEqBlock{margin-bottom:8px !important;}
+.pdf-render-mode .theme-catalog .doc-photo-box[data-count="3"] img{height:120px !important;}
+.pdf-render-mode .theme-catalog .doc-photo-box[data-count="1"] img{max-height:160px !important;}
+.pdf-render-mode .theme-catalog .doc-photo{padding:8px 0 !important;}
+.pdf-render-mode .doc-car-name{font-size:16px !important;}
+.pdf-render-mode .doc-specs{font-size:10px !important;line-height:1.25 !important;}
+.pdf-render-mode .doc-equip{font-size:9px !important;line-height:1.25 !important;}
+.pdf-render-mode .doc-footer{margin-bottom:6px !important;padding-top:8px !important;}
+.pdf-render-mode .doc-price-box{padding:8px !important;margin-bottom:8px !important;}
+.pdf-render-mode .doc-price-new{font-size:20px !important;}
+.pdf-render-mode .doc-price-old{font-size:13px !important;}
+.pdf-render-mode #stdEqBlock{margin-bottom:6px !important;}
+.pdf-render-mode #dealerEqBlock{margin-bottom:6px !important;}
+.pdf-render-mode .doc-title{font-size:16px !important;margin-bottom:8px !important;}
+.pdf-render-mode .doc-header{margin-bottom:8px !important;}
+.pdf-render-mode .doc-main{margin-bottom:8px !important;}
+.pdf-render-mode .doc-package{margin-bottom:6px !important;}
 #document-container.pdf-render-mode{min-height:0 !important;height:auto !important;}
   .pdf-render-mode#document-container{
   min-height:0 !important;
@@ -2538,11 +2544,13 @@ function renderKP() {
   // official — до 3 фото вверху, catalog — до 3, premium — только 1
   let mainImages = imagesToRender;
   if (curTheme === 'official') {
-    mainImages = imagesToRender.slice(0, 3);
+    // В бланке — только 1 фото вверху, остальные уходят в галерею
+    mainImages = imagesToRender.length > 0 ? [imagesToRender[0]] : [];
   } else if (curTheme === 'catalog') {
     mainImages = imagesToRender.slice(0, 3);
   } else if (imagesToRender.length > 0) {
     mainImages = [imagesToRender[0]];
+  }
   }
   if (photoBox) {
       if (mainImages.length > 0) { photoBox.setAttribute('data-count', mainImages.length); photoBox.innerHTML = mainImages.map(img => `<img src="${img}">`).join(''); } 
