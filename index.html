@@ -1028,27 +1028,23 @@ body.light-theme .card .btn-red:hover{
 }
 .official-photo-grid{
   display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:12px;
+  grid-template-columns:1fr;
+  gap:20px;
   width:100%;
-}
-/* Ряд из 3 фото на первом листе */
-.official-photo-grid.official-grid-3{
-  grid-template-columns:1fr 1fr 1fr;
 }
 .official-photo-grid img{
   width:100%;
-  height:188px;
-  object-fit:cover;     /* ← обрезаем, НЕ растягиваем */
+  height:auto;
+  max-height:420px;
+  object-fit:contain;
+  object-position:center;
   border:1px solid #d1d5db;
-  border-radius:4px;
-  background:#fff;
+  border-radius:6px;
+  background:#f9fafb;
   display:block;
   break-inside:avoid;
-}
-/* Фото в ряду из 3 — чуть ниже, чтобы влезли */
-.official-photo-grid.official-grid-3 img{
-  height:150px;
+  page-break-inside:avoid;
+  break-before:avoid;
 }
 body.mobile-view .official-photo-grid{
   grid-template-columns:1fr;
@@ -2548,10 +2544,11 @@ function renderKP() {
       const galleryImages = imagesToRender.slice(1);
       const carTitle = val('vCarName') || 'Автомобиль';
       officialGallery.style.display = 'block';
-      officialGallery.innerHTML =
+            officialGallery.innerHTML =
         '<div class="gallery-title">Фотографии: ' + carTitle + '</div>' +
         '<div class="official-photo-grid">' +
-        galleryImages.map(img => `<img src="${img}">`).join('') + '</div>';
+        galleryImages.map(img => `<img src="${img}" style="break-inside:avoid; page-break-inside:avoid;">`).join('') +
+        '</div>';
     } else {
       officialGallery.style.display = 'none';
       officialGallery.innerHTML = '';
@@ -2744,16 +2741,19 @@ function downloadPDF() {
       tempWrap.appendChild(galleryClone);
       document.body.appendChild(tempWrap);
 
-      // Фиксируем размеры фото галереи
+            // Фиксируем размеры фото галереи (без искажений, 1 в ряд)
       galleryClone.querySelectorAll('img').forEach(im => {
         im.style.width = '100%';
-        im.style.height = '210px';
-        im.style.objectFit = 'cover';
+        im.style.height = 'auto';
+        im.style.maxHeight = '400px';
+        im.style.objectFit = 'contain';
         im.style.objectPosition = 'center';
         im.style.display = 'block';
         im.style.borderRadius = '6px';
         im.style.border = '1px solid #d1d5db';
         im.style.background = '#f9fafb';
+        im.style.pageBreakInside = 'avoid';
+        im.style.breakInside = 'avoid';
       });
 
       html2canvas(tempWrap, {
