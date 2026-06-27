@@ -2603,9 +2603,10 @@ function downloadPDF() {
       }
 
       // === ШАГ 2: рендерим ТОЛЬКО галерею ===
-      gallery.style.display = 'block';
+           gallery.style.display = 'block';
       // временно вынимаем галерею в отдельный контейнер шириной 210мм
       const tempWrap = document.createElement('div');
+      tempWrap.className = 'theme-official'; // ← ВАЖНО: возвращаем класс темы
       tempWrap.style.cssText = 'position:absolute; left:-9999px; top:0; width:210mm; background:#fff; padding:15mm; box-sizing:border-box;';
       const galleryClone = gallery.cloneNode(true);
       galleryClone.style.display = 'block';
@@ -2613,8 +2614,16 @@ function downloadPDF() {
       tempWrap.appendChild(galleryClone);
       document.body.appendChild(tempWrap);
 
-      html2canvas(tempWrap, { scale: 3, useCORS: true }).then(canvasG => {
-        document.body.removeChild(tempWrap);
+      // Принудительно фиксируем размеры фото для html2canvas (он не понимает object-fit на клонах)
+      galleryClone.querySelectorAll('img').forEach(im => {
+        im.style.width = '100%';
+        im.style.height = '188px';
+        im.style.objectFit = 'cover';
+        im.style.objectPosition = 'center';
+        im.style.display = 'block';
+        im.style.borderRadius = '4px';
+        im.style.border = '1px solid #d1d5db';
+      });
 
                // высота одной "рабочей зоны" листа в пикселях канваса
         const pageCanvasH = Math.floor(canvasG.width * (pdfHeight / pdfWidth));
