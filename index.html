@@ -2726,69 +2726,109 @@ function downloadPDF() {
         return;
       }
 
-      // === Страница(ы) галереи для "Бланка" ===
+            // === Галерея для "Бланка" — каждое фото рендерится отдельно ===
       gallery.style.display = 'block';
 
-      const tempWrap = document.createElement('div');
-      tempWrap.style.cssText =
-        'position:absolute; left:-9999px; top:0; width:210mm; min-height:0; ' +
-        'background:#fff; padding:12mm 15mm; box-sizing:border-box; font-family:Inter,sans-serif;';
+      const galleryImages = Array.from(gallery.querySelectorAll('img'));
+      const galleryTitle = gallery.querySelector('.gallery-title');
 
-      const galleryClone = gallery.cloneNode(true);
-      galleryClone.style.display = 'block';
-      galleryClone.style.pageBreakBefore = 'auto';
-      galleryClone.style.breakBefore = 'auto';
-      tempWrap.appendChild(galleryClone);
-      document.body.appendChild(tempWrap);
+      // Рендерим каждое фото отдельно через цепочку промисов
+      const pdfW_px = pdfWidth; // мм
+      const margin = 15; // мм с каждой стороны
+      const contentW = pdfWidth - margin * 2;
+      const contentH = pdfHeight - margin * 2;
 
-            // Фиксируем размеры фото галереи (без искажений, 1 в ряд)
-      galleryClone.querySelectorAll('img').forEach(im => {
-        im.style.width = '100%';
-        im.style.height = 'auto';
-        im.style.maxHeight = '400px';
-        im.style.objectFit = 'contain';
-        im.style.objectPosition = 'center';
-        im.style.display = 'block';
-        im.style.borderRadius = '6px';
-        im.style.border = '1px solid #d1d5db';
-        im.style.background = '#f9fafb';
-        im.style.pageBreakInside = 'avoid';
-        im.style.breakInside = 'avoid';
+      // Сначала рендерим заголовок галереи
+      const renderTitle = () => new Promise(resolve => {
+        if (!galleryTitle) { resolve(); return; }
+        const titleDiv = document.createElement('div');
+        titleDiv.style.cssText =
+          'position:absolute; left:-9999px; top:0; width:180mm; ' +
+          'background:#fff; padding:0; font-family:Inter,sans-serif; font-size:16px; ' +
+          'font-weight:bold; border-bottom:2px solid #111; padding-bottom:8px; color:#000;';
+        titleDiv.textContent = galleryTitle.textContent;
+        document.body.appendChild(titleDiv);
+        html2canvas(titleDiv, { scale: 2, useCORS: true, logging: false }).then(c => {
+          document.body.removeChild(titleDiv);
+          pdf.addPage();
+          const h = (c.height * contentW) / c.width;
+          pdf.addImage(c.toDataURL('image/jpeg', 0.95), 'JPEG', margin, margin, contentW, h);
+          resolve(margin + h + 8); // возвращаем Y позицию после заголовка
+        }).catch(() => { document.body.removeChild(titleDiv); resolve(margin); });
       });
 
-      html2canvas(tempWrap, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        height: tempWrap.scrollHeight,
-        windowHeight: tempWrap.scrollHeight
-      }).then(canvasG => {
-        document.body.removeChild(tempWrap);
+      // Рендерим каждое фото по очереди
+      const renderPhotos = async (startY) => {
+        let currentY = startY;
+        let isFirstPage = true;
 
-        const pdfPageH_px2 = Math.floor(canvasG.width * (pdfHeight / pdfWidth));
-        let pos2 = 0;
-        const pageCanvas2 = document.createElement('canvas');
-        const ctx2 = pageCanvas2.getContext('2d');
-        pageCanvas2.width = canvasG.width;
+        for (let i = 0; i < galleryImages.length; i++) {
+          const imgSrc = galleryImages[i].src;
 
-        while (pos2 < canvasG.height) {
-          const h2 = Math.min(pdfPageH_px2, canvasG.height - pos2);
-          pageCanvas2.height = h2;
+          // Создаём div с одним фото для рендера
+          const photoDiv = document.createElement('div');
+          photoDiv.style.cssText =
+            'position:absolute; left:-9999px; top:0; width:180mm; ' +
+            'background:#f9fafb; border:1px solid #d1d5db; border-radius:6px; ' +
+            'overflow:hidden; display:flex; align-items:center; justify-content:center;';
 
-          ctx2.fillStyle = '#ffffff';
-          ctx2.fillRect(0, 0, pageCanvas2.width, h2);
-          ctx2.drawImage(canvasG, 0, pos2, canvasG.width, h2, 0, 0, canvasG.width, h2);
+          const img = document.createElement('img');
+          img.src = imgSrc;
+          img.style.cssText = 'width:100%; height:auto; display:block; object-fit:contain;';
+          photoDiv.appendChild(img);
+          document.body.appendChild(photoDiv);
 
-          const sliceH2 = (h2 * pdfWidth) / canvasG.width;
-          pdf.addPage();
-          pdf.addImage(pageCanvas2.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, pdfWidth, sliceH2);
-          pos2 += h2;
+          // Ждём загрузки картинки
+          await new Promise(res => {
+            if (img.complete) res();
+            else { img.onload = res; img.onerror = res; }
+          });
+
+          const canvas = await html2canvas(photoDiv, {
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            height: photoDiv.scrollHeight,
+            windowHeight: photoDiv.scrollHeight
+          });
+
+          document.body.removeChild(photoDiv);
+
+          // Считаем высоту фото в мм
+          const photoH = (canvas.height * contentW) / canvas.width;
+
+          // Проверяем: влезает ли фото на текущую страницу
+          const availableH = pdfHeight - currentY - margin;
+
+          if (!isFirstPage || photoH > availableH) {
+            // Фото не влезает — добавляем новую страницу
+            pdf.addPage();
+            currentY = margin;
+            isFirstPage = false;
+          }
+
+          pdf.addImage(
+            canvas.toDataURL('image/jpeg', 0.95),
+            'JPEG',
+            margin,
+            currentY,
+            contentW,
+            photoH
+          );
+
+          currentY += photoH + 10; // отступ между фото
+          isFirstPage = false;
         }
+      };
 
+      try {
+        const titleEndY = await renderTitle();
+        await renderPhotos(typeof titleEndY === 'number' ? titleEndY : margin);
         finishPDF();
-      }).catch(() => {
-        document.body.removeChild(tempWrap);
+      } catch(e) {
+        console.error(e);
         errPDF();
+      }
       });
 
     }).catch(() => {
