@@ -1000,12 +1000,12 @@ body.light-theme .card .btn-red:hover{
 .official-photo-grid{
   display:grid;
   grid-template-columns:1fr 1fr;
-  gap:14px;
+  gap:8px;              /* ← поменял */
   width:100%;
 }
 .official-photo-grid img{
   width:100%;
-  height:230px;
+  height:132px;         /* ← поменял (было 230px) */
   object-fit:cover;
   border:1px solid #d1d5db;
   border-radius:4px;
@@ -2566,15 +2566,42 @@ function downloadPDF() {
       html2canvas(tempWrap, { scale: 3, useCORS: true }).then(canvasG => {
         document.body.removeChild(tempWrap);
 
-        // высота одной "рабочей зоны" листа в пикселях канваса
+               // высота одной "рабочей зоны" листа в пикселях канваса
         const pageCanvasH = Math.floor(canvasG.width * (pdfHeight / pdfWidth));
         let pos = 0;
         const pageCanvas = document.createElement('canvas');
         const ctx = pageCanvas.getContext('2d');
         pageCanvas.width = canvasG.width;
 
+        // вспомогательный канвас для анализа строк на "пустоту" (белый фон между фото)
+        const probe = document.createElement('canvas');
+        probe.width = canvasG.width; probe.height = canvasG.height;
+        const pctx = probe.getContext('2d');
+        pctx.drawImage(canvasG, 0, 0);
+
+        function isRowEmpty(y) {
+          // считаем строку "пустой", если она почти вся белая
+          try {
+            const data = pctx.getImageData(0, y, canvasG.width, 1).data;
+            let nonWhite = 0;
+            for (let i = 0; i < data.length; i += 4 * 10) { // выборка каждый 10-й пиксель
+              if (data[i] < 245 || data[i+1] < 245 || data[i+2] < 245) nonWhite++;
+            }
+            return nonWhite < 3;
+          } catch(e) { return false; }
+        }
+
         while (pos < canvasG.height) {
-          const h = Math.min(pageCanvasH, canvasG.height - pos);
+          let h = Math.min(pageCanvasH, canvasG.height - pos);
+
+          // если это не последний кусок — ищем ближайшую "пустую" линию выше, чтобы не резать фото
+          if (pos + h < canvasG.height) {
+            let cut = pos + h;
+            const minCut = pos + Math.floor(pageCanvasH * 0.6); // не отрезаем слишком мало
+            while (cut > minCut && !isRowEmpty(cut)) cut--;
+            if (cut > minCut) h = cut - pos;
+          }
+
           pageCanvas.height = h;
           ctx.fillStyle = '#fff';
           ctx.fillRect(0, 0, pageCanvas.width, h);
