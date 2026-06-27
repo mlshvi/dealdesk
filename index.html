@@ -3088,46 +3088,6 @@ function downloadImage() {
     });
   }, 300);
 }
-
-// Запускаем фоновую загрузку цен
-  // ==========================================
-// AI ЧАТ — переменные и инициализация
-// ==========================================
-const AI_WORKER_URL = 'https://your-worker.workers.dev'; // замени на свой URL
-let aiChatHistory = [];
-let aiIsLoading = false;
-
-function toggleAiChat() {
-  const win = $('aiChatWindow');
-  if (!win) return;
-  win.classList.toggle('active');
-}
-
-function downloadImage() {
-  const element = $('document-container');
-  const wasMobile = document.body.classList.contains('mobile-view');
-  document.body.classList.remove('mobile-view');
-  element.style.width = '210mm';
-  element.style.minHeight = '0';
-
-  setTimeout(() => {
-    html2canvas(element, { scale: 2, useCORS: true, logging: false }).then(canvas => {
-      if (wasMobile) document.body.classList.add('mobile-view');
-      element.style.width = '';
-      element.style.minHeight = '';
-      const link = document.createElement('a');
-      link.download = `КП_${val('vCarName') || 'Автосалон'}.jpg`;
-      link.href = canvas.toDataURL('image/jpeg', 0.95);
-      link.click();
-      showToast('🖼️ Картинка скачана!');
-    }).catch(() => {
-      if (wasMobile) document.body.classList.add('mobile-view');
-      element.style.width = '';
-      element.style.minHeight = '';
-      showToast('❌ Ошибка', true);
-    });
-  }, 300);
-}
 loadCatalogFromGoogle();
 </script>
   <!-- МОДАЛКА СРАВНЕНИЯ КОМПЛЕКТАЦИЙ -->
