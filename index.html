@@ -983,6 +983,22 @@ body.light-theme .card .btn-red{
 body.light-theme .card .btn-red:hover{
   background:rgba(220,38,38,.15) !important;
 }
+  /* Галерея доп. фото для официального бланка */
+.official-photo-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:10px;
+}
+.official-photo-grid img{
+  width:100%;
+  height:140px;
+  object-fit:cover;
+  border:1px solid #d1d5db;
+  background:#fff;
+}
+body.mobile-view .official-photo-grid{
+  grid-template-columns:1fr 1fr;
+}
   body.light-theme .card .btn-red:hover{
   background:rgba(220,38,38,.15) !important;
 }
@@ -1306,10 +1322,12 @@ body.light-theme .card .btn-red:hover{
       </div>
     </div>
 
-    <div id="stdEqBlock" style="margin-bottom: 15px; display: none;">
+      <div id="stdEqBlock" style="margin-bottom: 15px; display: none;">
       <div style="font-weight:bold; margin-bottom:5px; font-size: 13px;">Базовое оснащение:</div>
       <ul class="doc-equip" id="outCarStdEq"></ul>
     </div>
+
+    <div id="outOfficialGallery" style="margin-bottom: 15px; display: none; page-break-inside: avoid; break-inside: avoid;"></div>
 
     <div id="dealerEqBlock" style="margin-bottom: 15px; display: none; page-break-inside: avoid; break-inside: avoid;">
       <div style="font-weight:bold; margin-bottom:5px; font-size: 13px; color: #1d4ed8;">Дополнительное оборудование:</div>
@@ -2042,9 +2060,9 @@ const vImg = $('vCarImg');
 if (vImg) {
   vImg.addEventListener('change', async function () {
     if (!this.files || !this.files.length) return; 
-    const files = Array.from(this.files).slice(0, 3); let newPhotos = [];
+    const files = Array.from(this.files).slice(0, 10); let newPhotos = [];
     for(let file of files) { await new Promise(res => { compressImage(file, compressed => { newPhotos.push(compressed); res(); }); }); }
-    db.imgCars = [...(db.imgCars || []), ...newPhotos].slice(0, 3); saveDB(); renderGallery(); renderKP(); this.value = '';
+    db.imgCars = [...(db.imgCars || []), ...newPhotos].slice(0, 10); saveDB(); renderGallery(); renderKP(); this.value = '';
   });
 }
 
@@ -2392,10 +2410,27 @@ function renderKP() {
 
   const carKey = normalizeCarKey(val('vCarName')); const photoBox = $('outCarImg'); let imagesToRender = [];
   if (db.imgCars && db.imgCars.length > 0) { imagesToRender = db.imgCars; } else if (carKey && AUTO_IMAGES[carKey]) { imagesToRender = [AUTO_IMAGES[carKey]]; }
-  if (val('vTheme') !== 'catalog' && imagesToRender.length > 0) { imagesToRender = [imagesToRender[0]]; }
+  const curTheme = val('vTheme');
+  // В премиум и официальном базовом блоке — только 1 фото вверху
+  let mainImages = imagesToRender;
+  if (curTheme !== 'catalog' && imagesToRender.length > 0) { mainImages = [imagesToRender[0]]; }
   if (photoBox) {
-      if (imagesToRender.length > 0) { photoBox.setAttribute('data-count', imagesToRender.length); photoBox.innerHTML = imagesToRender.map(img => `<img src="${img}">`).join(''); } 
+      if (mainImages.length > 0) { photoBox.setAttribute('data-count', mainImages.length); photoBox.innerHTML = mainImages.map(img => `<img src="${img}">`).join(''); } 
       else { photoBox.setAttribute('data-count', 0); photoBox.innerHTML = '<span>Фото авто</span>'; }
+  }
+
+  // Галерея доп. фото для шаблона "Официальный (Бланк)"
+  const officialGallery = $('outOfficialGallery');
+  if (officialGallery) {
+    if (curTheme === 'official' && imagesToRender.length > 1) {
+      const extraImages = imagesToRender.slice(1);
+      officialGallery.style.display = 'block';
+      officialGallery.innerHTML = '<div style="font-weight:bold; margin-bottom:8px; font-size:13px;">Фотографии автомобиля:</div>' +
+        '<div class="official-photo-grid">' + extraImages.map(img => `<img src="${img}">`).join('') + '</div>';
+    } else {
+      officialGallery.style.display = 'none';
+      officialGallery.innerHTML = '';
+    }
   }
 }
 
