@@ -983,24 +983,35 @@ body.light-theme .card .btn-red{
 body.light-theme .card .btn-red:hover{
   background:rgba(220,38,38,.15) !important;
 }
-  /* Галерея доп. фото для официального бланка */
+ /* Галерея доп. фото для официального бланка — на отдельном листе */
 #outOfficialGallery{
   width:100%;
+  page-break-before:always;
+  break-before:page;
+  padding-top:10px;
+}
+#outOfficialGallery .gallery-title{
+  font-weight:bold;
+  font-size:16px;
+  margin-bottom:14px;
+  padding-bottom:8px;
+  border-bottom:2px solid #111;
 }
 .official-photo-grid{
   display:grid;
   grid-template-columns:1fr 1fr;
-  gap:12px;
+  gap:14px;
   width:100%;
 }
 .official-photo-grid img{
   width:100%;
-  height:200px;
+  height:230px;
   object-fit:cover;
   border:1px solid #d1d5db;
   border-radius:4px;
   background:#fff;
   display:block;
+  break-inside:avoid;
 }
 body.mobile-view .official-photo-grid{
   grid-template-columns:1fr;
@@ -2425,14 +2436,14 @@ function renderKP() {
       else { photoBox.setAttribute('data-count', 0); photoBox.innerHTML = '<span>Фото авто</span>'; }
   }
 
-  // Галерея доп. фото для шаблона "Официальный (Бланк)"
+  // Галерея доп. фото для шаблона "Официальный (Бланк)" — на отдельном листе
   const officialGallery = $('outOfficialGallery');
   if (officialGallery) {
-    if (curTheme === 'official' && imagesToRender.length > 1) {
-      const extraImages = imagesToRender.slice(1);
+    if (curTheme === 'official' && imagesToRender.length > 0) {
       officialGallery.style.display = 'block';
-      officialGallery.innerHTML = '<div style="font-weight:bold; margin-bottom:8px; font-size:13px;">Фотографии автомобиля:</div>' +
-        '<div class="official-photo-grid">' + extraImages.map(img => `<img src="${img}">`).join('') + '</div>';
+      const carTitle = val('vCarName') || 'Автомобиль';
+      officialGallery.innerHTML = '<div class="gallery-title">Фотографии автомобиля: ' + carTitle + '</div>' +
+        '<div class="official-photo-grid">' + imagesToRender.map(img => `<img src="${img}">`).join('') + '</div>';
     } else {
       officialGallery.style.display = 'none';
       officialGallery.innerHTML = '';
@@ -2514,11 +2525,38 @@ function downloadPDF() {
 
   setTimeout(() => {
     html2canvas(element, { scale: 3, useCORS: true }).then(canvas => {
-      const imgData = canvas.toDataURL('image/jpeg', 0.95); const { jsPDF } = window.jspdf; const pdf = new jsPDF('p', 'mm', 'a4');
-      const pdfWidth = 210; const pdfHeight = 297; let finalWidth = pdfWidth; let finalHeight = (canvas.height * pdfWidth) / canvas.width;
-      if (finalHeight > pdfHeight) { finalHeight = pdfHeight; finalWidth = (canvas.width * pdfHeight) / canvas.height; }
-      let xOffset = (pdfWidth - finalWidth) / 2; pdf.addImage(imgData, 'JPEG', xOffset, 0, finalWidth, finalHeight);
+      const { jsPDF } = window.jspdf; const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = 210; const pdfHeight = 297;
+      const imgWidth = pdfWidth;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
       let fileName = 'КП_Автосалон.pdf'; if (val('vCarName')) fileName = `КП_${val('vCarName').replace(/\s+/g, '_')}.pdf`;
+
+      if (imgHeight <= pdfHeight) {
+        // влезает на один лист
+        const imgData = canvas.toDataURL('image/jpeg', 0.95);
+        pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
+      } else {
+        // режем на несколько листов
+        const pageCanvasH = Math.floor(canvas.width * (pdfHeight / pdfWidth));
+        let pos = 0; let page = 0;
+        const pageCanvas = document.createElement('canvas');
+        const ctx = pageCanvas.getContext('2d');
+        pageCanvas.width = canvas.width;
+        while (pos < canvas.height) {
+          const h = Math.min(pageCanvasH, canvas.height - pos);
+          pageCanvas.height = h;
+          ctx.fillStyle = '#fff';
+          ctx.fillRect(0, 0, pageCanvas.width, h);
+          ctx.drawImage(canvas, 0, pos, canvas.width, h, 0, 0, canvas.width, h);
+          const sliceData = pageCanvas.toDataURL('image/jpeg', 0.95);
+          const sliceH = (h * imgWidth) / canvas.width;
+          if (page > 0) pdf.addPage();
+          pdf.addImage(sliceData, 'JPEG', 0, 0, imgWidth, sliceH);
+          pos += h; page++;
+        }
+      }
+
       pdf.save(fileName); if (wasMobile) document.body.classList.add('mobile-view'); element.style.width = '';
       btn.textContent = originalText; btn.disabled = false; showToast("✅ PDF успешно скачан!");
     }).catch(e => {
