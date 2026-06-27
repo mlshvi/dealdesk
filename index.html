@@ -2551,7 +2551,6 @@ function renderKP() {
   } else if (imagesToRender.length > 0) {
     mainImages = [imagesToRender[0]];
   }
-  }
   if (photoBox) {
       if (mainImages.length > 0) { photoBox.setAttribute('data-count', mainImages.length); photoBox.innerHTML = mainImages.map(img => `<img src="${img}">`).join(''); } 
       else { photoBox.setAttribute('data-count', 0); photoBox.innerHTML = '<span>Фото авто</span>'; }
