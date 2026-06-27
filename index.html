@@ -2659,20 +2659,8 @@ function downloadPDF() {
 
   // Для "Бланка" — 1 фото вверху (уже обеспечено в renderKP)
   // Для "Бланка" — принудительно ставим inline-стили на фото
-  if (curTheme === 'official') {
-    const headerImgs = element.querySelectorAll('#outCarImg img');
-    headerImgs.forEach(im => {
-      im.style.width = '100%';
-      im.style.maxWidth = '100%';
-      im.style.maxHeight = '220px';
-      im.style.objectFit = 'cover';
-      im.style.objectPosition = 'center';
-      im.style.display = 'block';
-      im.style.borderRadius = '8px';
-    });
-  }
-
-  setTimeout(() => {
+ 
+    setTimeout(() => {
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF('p', 'mm', 'a4');
     const pdfWidth = 210;
