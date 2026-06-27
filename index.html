@@ -2501,7 +2501,7 @@ function renderKP() {
       }
     }
 }
-
+}
 function autoNumDate() {
   setVal('vNum', `${new Date().getFullYear()}-${String(db.counter++).padStart(3, '0')}`);
   let d = new Date(); d.setDate(d.getDate() + 7); setVal('vDate', `до ${d.toLocaleDateString('ru-RU')}`); saveDB(); renderKP();
