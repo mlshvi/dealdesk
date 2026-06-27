@@ -2443,64 +2443,41 @@ function renderKP() {
   const carKey = normalizeCarKey(val('vCarName')); const photoBox = $('outCarImg'); let imagesToRender = [];
   if (db.imgCars && db.imgCars.length > 0) { imagesToRender = db.imgCars; } else if (carKey && AUTO_IMAGES[carKey]) { imagesToRender = [AUTO_IMAGES[carKey]]; }
   const curTheme = val('vTheme');
-  // В премиум и официальном базовом блоке — только 1 фото вверху
+
+  // Сколько фото показываем вверху:
+  // official — до 3 фото вверху, catalog — все, premium — только 1
   let mainImages = imagesToRender;
-  if (curTheme !== 'catalog' && imagesToRender.length > 0) { mainImages = [imagesToRender[0]]; }
+  if (curTheme === 'official') {
+    mainImages = imagesToRender.slice(0, 3);
+  } else if (curTheme !== 'catalog' && imagesToRender.length > 0) {
+    mainImages = [imagesToRender[0]];
+  }
   if (photoBox) {
       if (mainImages.length > 0) { photoBox.setAttribute('data-count', mainImages.length); photoBox.innerHTML = mainImages.map(img => `<img src="${img}">`).join(''); } 
       else { photoBox.setAttribute('data-count', 0); photoBox.innerHTML = '<span>Фото авто</span>'; }
   }
 
-   // Галерея доп. фото для шаблона "Официальный (Бланк)"
-  // Лист 1: 3 фото внизу КП. Лист 2: остальные фото. Без дубля главного.
+     // Галерея доп. фото для шаблона "Официальный (Бланк)"
+  // Вверху КП уже показаны первые 3 фото. Остальные (4-11) — на отдельном листе.
   const officialGallery = $('outOfficialGallery');
   const officialFirstRow = $('outOfficialFirstRow');
+  if (officialFirstRow) { officialFirstRow.style.display = 'none'; officialFirstRow.innerHTML = ''; }
   if (officialGallery) {
-    // Убираем главное фото (оно уже показано вверху КП) — остаётся "галерея без дубля"
-    const galleryImages = imagesToRender.length > 1 ? imagesToRender.slice(1) : [];
+    // Фото с 4-го и далее (первые 3 уже вверху)
+    const restImages = imagesToRender.length > 3 ? imagesToRender.slice(3) : [];
 
-    if (curTheme === 'official' && galleryImages.length > 0) {
+    if (curTheme === 'official' && restImages.length > 0) {
       const carTitle = val('vCarName') || 'Автомобиль';
-
-      // Первые 3 фото — на ЛИСТ 1 (под КП)
-      const firstThree = galleryImages.slice(0, 3);
-      // Остальные — на ЛИСТ 2
-      const rest = galleryImages.slice(3);
-
-      // --- ЛИСТ 1: блок под основным КП ---
-      if (officialFirstRow) {
-        if (firstThree.length > 0) {
-          officialFirstRow.style.display = 'block';
-          officialFirstRow.innerHTML =
-            '<div class="gallery-title">Фотографии автомобиля: ' + carTitle + '</div>' +
-            '<div class="official-photo-grid official-grid-3">' +
-            firstThree.map(img => `<img src="${img}">`).join('') + '</div>';
-        } else {
-          officialFirstRow.style.display = 'none';
-          officialFirstRow.innerHTML = '';
-        }
-      }
-
-      // --- ЛИСТ 2: остальные фото ---
-      if (rest.length > 0) {
-        officialGallery.style.display = 'block';
-        officialGallery.innerHTML =
-          '<div class="gallery-title">Дополнительные фотографии</div>' +
-          '<div class="official-photo-grid">' +
-          rest.map(img => `<img src="${img}">`).join('') + '</div>';
-      } else {
-        officialGallery.style.display = 'none';
-        officialGallery.innerHTML = '';
-      }
+      officialGallery.style.display = 'block';
+      officialGallery.innerHTML =
+        '<div class="gallery-title">Фотографии автомобиля: ' + carTitle + '</div>' +
+        '<div class="official-photo-grid">' +
+        restImages.map(img => `<img src="${img}">`).join('') + '</div>';
     } else {
       officialGallery.style.display = 'none';
       officialGallery.innerHTML = '';
-      if (officialFirstRow) {
-        officialFirstRow.style.display = 'none';
-        officialFirstRow.innerHTML = '';
-      }
     }
-}
+  }
 }
 function autoNumDate() {
   setVal('vNum', `${new Date().getFullYear()}-${String(db.counter++).padStart(3, '0')}`);
